@@ -44,6 +44,8 @@
       y: 0,
       scale: 1,
       rotation: 0,
+      dragMode: "move",
+      dragStart: null,
       lastX: 0,
       lastY: 0
     }
@@ -75,6 +77,7 @@
   var underlayFile = document.getElementById("underlay-file");
   var underlayLayer = document.getElementById("underlay-layer");
   var underlayImage = document.getElementById("underlay-image");
+  var underlayGizmo = document.getElementById("underlay-gizmo");
   var moveUnderlayButton = document.getElementById("move-underlay");
   var clearUnderlayButton = document.getElementById("clear-underlay");
   var generateTopViewButton = document.getElementById("generate-top-view");
@@ -224,12 +227,13 @@
       state.underlay.y = 0;
       state.underlay.scale = 1;
       state.underlay.rotation = 0;
+      underlayImage.onload = updateUnderlay;
       underlayImage.src = String(reader.result || "");
       underlayLayer.classList.add("is-visible");
       updateUnderlay();
       updateSceneVisibility();
       setUnderlayMove(true);
-      supportText.textContent = "下絵を読み込みました。ドラッグで移動、ホイールで拡大縮小、Shift+ホイールで回転できます。";
+      supportText.textContent = "下絵を読み込みました。左ドラッグで移動、黄色い角で拡大縮小、上の丸で回転できます。";
     };
     reader.onerror = function () {
       supportText.textContent = "下絵画像を読み込めませんでした。";
@@ -237,22 +241,119 @@
     reader.readAsDataURL(file);
   }
 
-  function updateUnderlay() {
-    if (!underlayImage) return;
-    underlayImage.style.transform = "translate(-50%, -50%) translate(" + state.underlay.x + "px, " + state.underlay.y + "px) scale(" + state.underlay.scale + ") rotate(" + state.underlay.rotation + "deg)";
+  function underlayTransform() {
+    return "translate(-50%, -50%) translate(" + state.underlay.x + "px, " + state.underlay.y + "px) rotate(" + state.underlay.rotation + "deg) scale(" + state.underlay.scale + ")";
   }
 
+  function updateUnderlay() {
+    if (!underlayImage) return;
+    underlayImage.style.transform = underlayTransform();
+    updateUnderlayGizmo();
+  }
+
+
+  function setUnderlayGizmoState() {
+    if (!underlayGizmo) return;
+    underlayGizmo.classList.toggle("is-visible", state.underlay.loaded && state.underlay.move);
+    wrap.classList.toggle("is-underlay-scaling", state.underlay.dragging && state.underlay.dragMode === "scale");
+    wrap.classList.toggle("is-underlay-rotating", state.underlay.dragging && state.underlay.dragMode === "rotate");
+  }
+
+  function updateUnderlayGizmo() {
+    if (!underlayGizmo || !underlayImage) return;
+    var width = (underlayImage.offsetWidth || underlayImage.naturalWidth || 1) * state.underlay.scale;
+    var height = (underlayImage.offsetHeight || underlayImage.naturalHeight || 1) * state.underlay.scale;
+    underlayGizmo.style.width = width + "px";
+    underlayGizmo.style.height = height + "px";
+    underlayGizmo.style.transform = "translate(-50%, -50%) translate(" + state.underlay.x + "px, " + state.underlay.y + "px) rotate(" + state.underlay.rotation + "deg)";
+    setUnderlayGizmoState();
+  }
+
+  function underlayPointer(event) {
+    var rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function rotatePoint(x, y, radians) {
+    var cos = Math.cos(radians);
+    var sin = Math.sin(radians);
+    return { x: x * cos - y * sin, y: x * sin + y * cos };
+  }
+
+  function underlayGizmoGeometry() {
+    if (!state.underlay.loaded || !underlayImage) return null;
+    var baseW = underlayImage.offsetWidth || underlayImage.naturalWidth || 1;
+    var baseH = underlayImage.offsetHeight || underlayImage.naturalHeight || 1;
+    var scale = state.underlay.scale || 1;
+    var halfW = baseW * scale / 2;
+    var halfH = baseH * scale / 2;
+    var center = { x: wrap.clientWidth / 2 + state.underlay.x, y: wrap.clientHeight / 2 + state.underlay.y };
+    var radians = state.underlay.rotation * Math.PI / 180;
+    function corner(name, x, y) {
+      var p = rotatePoint(x, y, radians);
+      return { name: name, type: "scale", x: center.x + p.x, y: center.y + p.y };
+    }
+    var top = rotatePoint(0, -halfH, radians);
+    var rotate = rotatePoint(0, -halfH - 52, radians);
+    return {
+      center: center,
+      rotate: { name: "rotate", type: "rotate", x: center.x + rotate.x, y: center.y + rotate.y },
+      top: { x: center.x + top.x, y: center.y + top.y },
+      corners: [
+        corner("nw", -halfW, -halfH),
+        corner("ne", halfW, -halfH),
+        corner("se", halfW, halfH),
+        corner("sw", -halfW, halfH)
+      ]
+    };
+  }
+
+  function hitUnderlayGizmo(point) {
+    if (!state.underlay.move || !state.underlay.loaded) return null;
+    var geometry = underlayGizmoGeometry();
+    if (!geometry) return null;
+    if (Math.hypot(point.x - geometry.rotate.x, point.y - geometry.rotate.y) <= 18) return geometry.rotate;
+    for (var i = 0; i < geometry.corners.length; i += 1) {
+      var corner = geometry.corners[i];
+      if (Math.abs(point.x - corner.x) <= 16 && Math.abs(point.y - corner.y) <= 16) return corner;
+    }
+    return null;
+  }
+
+  function beginUnderlayDrag(event) {
+    var point = underlayPointer(event);
+    var handle = hitUnderlayGizmo(point);
+    var geometry = underlayGizmoGeometry();
+    state.underlay.dragging = true;
+    state.underlay.dragMode = handle ? handle.type : "move";
+    state.underlay.lastX = event.clientX;
+    state.underlay.lastY = event.clientY;
+    state.underlay.dragStart = {
+      x: state.underlay.x,
+      y: state.underlay.y,
+      scale: state.underlay.scale,
+      rotation: state.underlay.rotation,
+      centerX: geometry ? geometry.center.x : point.x,
+      centerY: geometry ? geometry.center.y : point.y,
+      startAngle: geometry ? Math.atan2(point.y - geometry.center.y, point.x - geometry.center.x) : 0,
+      startDistance: geometry ? Math.max(1, Math.hypot(point.x - geometry.center.x, point.y - geometry.center.y)) : 1
+    };
+    setUnderlayGizmoState();
+  }
   function setUnderlayMove(active) {
     state.underlay.move = Boolean(active && state.underlay.loaded);
     wrap.classList.toggle("is-underlay-move", state.underlay.move);
     if (moveUnderlayButton) moveUnderlayButton.classList.toggle("is-active", state.underlay.move);
+    updateUnderlayGizmo();
   }
 
   function clearUnderlay() {
     state.underlay.loaded = false;
     state.underlay.dragging = false;
+    state.underlay.dragStart = null;
     state.underlay.move = false;
     if (underlayImage) underlayImage.removeAttribute("src");
+    if (underlayGizmo) underlayGizmo.classList.remove("is-visible");
     if (underlayLayer) underlayLayer.classList.remove("is-visible");
     setUnderlayMove(false);
     updateSceneVisibility();
@@ -794,9 +895,7 @@
 
   canvas.addEventListener("pointerdown", function (event) {
     if (state.underlay.move && state.underlay.loaded) {
-      state.underlay.dragging = true;
-      state.underlay.lastX = event.clientX;
-      state.underlay.lastY = event.clientY;
+      beginUnderlayDrag(event);
       canvas.setPointerCapture(event.pointerId);
       return;
     }
@@ -807,12 +906,22 @@
   });
   canvas.addEventListener("pointermove", function (event) {
     if (state.underlay.dragging) {
-      var ux = event.clientX - state.underlay.lastX;
-      var uy = event.clientY - state.underlay.lastY;
+      var point = underlayPointer(event);
+      var start = state.underlay.dragStart || {};
+      if (state.underlay.dragMode === "rotate") {
+        var angle = Math.atan2(point.y - start.centerY, point.x - start.centerX);
+        state.underlay.rotation = start.rotation + (angle - start.startAngle) * 180 / Math.PI;
+      } else if (state.underlay.dragMode === "scale") {
+        var distance = Math.max(1, Math.hypot(point.x - start.centerX, point.y - start.centerY));
+        state.underlay.scale = Math.max(0.1, Math.min(8, start.scale * distance / Math.max(1, start.startDistance)));
+      } else {
+        var ux = event.clientX - state.underlay.lastX;
+        var uy = event.clientY - state.underlay.lastY;
+        state.underlay.x += ux;
+        state.underlay.y += uy;
+      }
       state.underlay.lastX = event.clientX;
       state.underlay.lastY = event.clientY;
-      state.underlay.x += ux;
-      state.underlay.y += uy;
       updateUnderlay();
       return;
     }
@@ -827,6 +936,8 @@
   canvas.addEventListener("pointerup", function (event) {
     if (state.underlay.dragging) {
       state.underlay.dragging = false;
+      state.underlay.dragStart = null;
+      setUnderlayGizmoState();
       canvas.releasePointerCapture(event.pointerId);
       return;
     }
