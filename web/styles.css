@@ -201,6 +201,22 @@ button, input, select { font: inherit; }
 }
 .viewer-wrap.is-dragging .drop-hint { display: grid; }
 
+.viewer-wrap.is-loading::after {
+  content: "OBJを解析中...";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  border: 1px solid rgba(37, 48, 64, 0.22);
+  border-radius: 8px;
+  background: rgba(17, 23, 32, 0.88);
+  color: #f7c531;
+  padding: 12px 18px;
+  font-weight: 900;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+}
+
 .file-name {
   border: 1px solid var(--line);
   background: #121923;

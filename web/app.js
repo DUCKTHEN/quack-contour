@@ -57,6 +57,8 @@
   var compareName = document.getElementById("compare-name");
   var diagnostics = document.getElementById("diagnostics");
   var supportText = document.getElementById("support-text");
+  var objWorker = window.Worker ? new Worker("web/obj-worker.js") : null;
+  var parseJobId = 0;
 
   function makeMaterial(color, opacity) {
     return new THREE.MeshLambertMaterial({
@@ -116,6 +118,61 @@
     };
   }
 
+  function parseObjAsync(text) {
+    if (!objWorker) {
+      return Promise.resolve(parseObj(text));
+    }
+
+    return new Promise(function (resolve, reject) {
+      var jobId = parseJobId + 1;
+      parseJobId = jobId;
+
+      function cleanup() {
+        objWorker.removeEventListener("message", onMessage);
+        objWorker.removeEventListener("error", onError);
+      }
+
+      function onMessage(event) {
+        if (!event.data || event.data.id !== jobId) return;
+        cleanup();
+        if (!event.data.ok) {
+          reject(new Error(event.data.error || "OBJの読み込みに失敗しました。"));
+          return;
+        }
+        resolve(createParsedGeometry(event.data.parsed));
+      }
+
+      function onError(error) {
+        cleanup();
+        reject(error);
+      }
+
+      objWorker.addEventListener("message", onMessage);
+      objWorker.addEventListener("error", onError);
+      objWorker.postMessage({ id: jobId, text: text });
+    }).catch(function () {
+      return parseObj(text);
+    });
+  }
+
+  function createParsedGeometry(parsed) {
+    var geometry = new THREE.BufferGeometry();
+    var positions = new Float32Array(parsed.positions);
+    var indices = new Uint32Array(parsed.indices);
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return {
+      geometry: geometry,
+      vertexCount: parsed.vertexCount,
+      faceCount: parsed.faceCount,
+      triangleCount: parsed.triangleCount,
+      byteLength: parsed.byteLength
+    };
+  }
+
   function normalizeMesh(mesh) {
     mesh.geometry.computeBoundingBox();
     var box = mesh.geometry.boundingBox;
@@ -151,9 +208,10 @@
   function loadFile(file, kind) {
     if (!file) return;
     var reader = new FileReader();
+    wrap.classList.add("is-loading");
+    supportText.textContent = (kind === "primary" ? "主モデル" : "比較モデル") + "を読み込み中です。";
     reader.onload = function () {
-      try {
-        var parsed = parseObj(String(reader.result || ""));
+      parseObjAsync(String(reader.result || "")).then(function (parsed) {
         if (state[kind]) {
           group.remove(state[kind]);
           disposeObject(state[kind]);
@@ -165,9 +223,15 @@
         updateLayout();
         updateDiagnostics();
         fitView();
-      } catch (error) {
+      }).catch(function (error) {
         supportText.textContent = error.message;
-      }
+      }).finally(function () {
+        wrap.classList.remove("is-loading");
+      });
+    };
+    reader.onerror = function () {
+      wrap.classList.remove("is-loading");
+      supportText.textContent = "ファイルを読み込めませんでした。";
     };
     reader.readAsText(file);
   }
