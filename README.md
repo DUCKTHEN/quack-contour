@@ -4,6 +4,22 @@ Quack Contour is a local browser tool for checking OBJ avatar body sections, sil
 
 It is a sister tool to [Quack Trace](https://github.com/DUCKTHEN/quack-trace), but Quack Contour focuses on imported avatar meshes instead of 2D pattern tracing.
 
+## 日本語概要
+
+Quack Contour は、OBJアバターモデルの体型断面・シルエット・上面断面図を確認するためのローカルツールです。
+
+[Quack Trace](https://github.com/DUCKTHEN/quack-trace) の姉妹ツールとして、2D型紙トレースではなく、3Dモデルの断面位置確認やモデル同士の比較に重点を置いています。
+
+主な用途:
+
+- 主モデルと比較モデルの体型バランスを並べて確認する。
+- 首、肩、バスト、ウエスト、ヒップなどの断面ガイドを調整する。
+- シルエット表示や外周線表示で、モデルの輪郭を確認する。
+- 上面断面図をPNG/JSONとして出力する。
+- 下絵画像や落書きメモを使って、モデラー向けの確認資料を作る。
+
+読み込んだOBJ/FBXモデルデータは、モデル制作者または利用者のものです。このプロジェクト作者やリポジトリは、読み込まれたモデルデータに対して一切の権利を主張しません。モデルファイルは作者へ送信されず、このリポジトリにも保存されません。
+
 ## What It Does
 
 - Import a primary OBJ avatar model.
@@ -14,6 +30,21 @@ It is a sister tool to [Quack Trace](https://github.com/DUCKTHEN/quack-trace), b
 - Move, scale, and rotate an underlay image.
 - Draw temporary notes on the viewer.
 - Mask mesh areas with rectangular or lasso selection.
+
+## Web Version Plan
+
+The current app is a local Python server app.
+
+A GitHub Pages / `github.io` version is planned, but it needs a browser-only architecture because GitHub Pages cannot run the Python `/api/generate` backend.
+
+Planned direction:
+
+- Keep the local Python version for heavy OBJ processing and export workflows.
+- Build a static web version for lightweight OBJ preview, silhouette comparison, guide editing, doodles, and model diagnostics.
+- Move browser-safe OBJ parsing and preview logic into JavaScript/Web Workers.
+- Treat top-view PNG/JSON generation as either a browser-worker feature or a local-only feature until performance is acceptable.
+
+See `docs/WEB_VERSION_PLAN.md`.
 
 ## Important Privacy Note
 
