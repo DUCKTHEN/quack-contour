@@ -43,6 +43,7 @@
           <input id="compare-file" type="file" accept=".obj,text/plain">
         </label>
       </div>
+      <button id="generate-top-view" type="button" class="wide-button primary">上面図生成</button>
 
       <section class="control-section">
         <h2>表示</h2>
@@ -74,7 +75,7 @@
 
       <section class="control-section muted-section">
         <h2>ローカル版</h2>
-        <p>断面編集、上面図PNG/JSON、下絵、落書き、マスクはローカルPython版で開発中です。</p>
+        <p>細かな断面編集、落書き、マスクはローカルPython版で開発中です。</p>
       </section>
     </aside>
 
@@ -102,6 +103,12 @@
         <h2>モデル診断</h2>
         <p class="hint">頂点数、面数、推定サイズ、重さの注意を確認できます。品質や商用利用可否を判定するものではありません。</p>
         <div id="diagnostics" class="diagnostics-list"></div>
+      </section>
+      <section>
+        <h2>上面断面図</h2>
+        <p id="topview-status" class="hint">主OBJを読み込むと、断面の上面図を生成できます。</p>
+        <canvas id="topview-canvas" class="topview-canvas" width="960" height="620" aria-label="top view section output"></canvas>
+        <div id="topview-links" class="output-links"></div>
       </section>
       <section>
         <h2>Web版の範囲</h2>

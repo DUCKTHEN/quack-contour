@@ -77,6 +77,20 @@
   var underlayImage = document.getElementById("underlay-image");
   var moveUnderlayButton = document.getElementById("move-underlay");
   var clearUnderlayButton = document.getElementById("clear-underlay");
+  var generateTopViewButton = document.getElementById("generate-top-view");
+  var topViewCanvas = document.getElementById("topview-canvas");
+  var topViewStatus = document.getElementById("topview-status");
+  var topViewLinks = document.getElementById("topview-links");
+  var topViewUrls = [];
+  var sectionDefs = [
+    { name: "neck", label: "首", y: 3.42, color: "#8a603e" },
+    { name: "shoulder", label: "肩", y: 2.82, color: "#9156dc" },
+    { name: "bust", label: "バスト", y: 2.62, color: "#d90535" },
+    { name: "under_bust", label: "アンダーバスト", y: 2.38, color: "#f58722" },
+    { name: "waist", label: "ウエスト", y: 1.92, color: "#0d8cc7" },
+    { name: "hip_upper", label: "ヒップ上側", y: 1.42, color: "#37985f" },
+    { name: "hip", label: "ヒップ", y: 0.98, color: "#202020" }
+  ];
 
   function updateSceneVisibility() {
     var hasModel = Boolean(state.primary || state.compare);
@@ -277,6 +291,288 @@
     return modelGroup;
   }
 
+
+  function clearTopViewOutput() {
+    topViewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+    topViewUrls = [];
+    if (topViewLinks) topViewLinks.innerHTML = "";
+    if (topViewStatus) topViewStatus.textContent = state.primary ? "上面図生成を押すと、現在の断面ガイドから断面図を作成します。" : "主OBJを読み込むと、断面の上面図を生成できます。";
+    if (topViewCanvas) {
+      var ctx = topViewCanvas.getContext("2d");
+      ctx.clearRect(0, 0, topViewCanvas.width, topViewCanvas.height);
+    }
+  }
+
+  function localYFromWorld(mesh, worldY) {
+    return (worldY - mesh.position.y) / mesh.scale.y;
+  }
+
+  function triangleSectionPoint(a, b, planeY, eps) {
+    var da = a.y - planeY;
+    var db = b.y - planeY;
+    if (Math.abs(da) <= eps && Math.abs(db) <= eps) return null;
+    if ((da > eps && db > eps) || (da < -eps && db < -eps)) return null;
+    var denom = da - db;
+    if (Math.abs(denom) <= eps) return null;
+    var t = da / denom;
+    if (t < -eps || t > 1 + eps) return null;
+    t = Math.max(0, Math.min(1, t));
+    return {
+      x: a.x + (b.x - a.x) * t,
+      z: a.z + (b.z - a.z) * t
+    };
+  }
+
+  function uniqueSectionPoints(points, tol) {
+    var out = [];
+    points.forEach(function (point) {
+      var exists = out.some(function (other) {
+        return Math.hypot(point.x - other.x, point.z - other.z) <= tol;
+      });
+      if (!exists) out.push(point);
+    });
+    return out;
+  }
+
+  function sliceMeshAtWorldY(model, worldY) {
+    var mesh = model.userData.mesh;
+    var geometry = mesh.geometry;
+    var positions = geometry.attributes.position.array;
+    var index = geometry.index ? geometry.index.array : null;
+    var planeY = localYFromWorld(mesh, worldY);
+    var eps = Math.max(mesh.userData.originalHeight || 1, 1) * 1e-6;
+    var pointTol = Math.max(mesh.userData.originalHeight || 1, 1) * 1e-5;
+    var segments = [];
+
+    function vertexAt(i) {
+      var p = i * 3;
+      return { x: positions[p], y: positions[p + 1], z: positions[p + 2] };
+    }
+
+    var triangleCount = index ? index.length / 3 : positions.length / 9;
+    for (var t = 0; t < triangleCount; t += 1) {
+      var i0 = index ? index[t * 3] : t * 3;
+      var i1 = index ? index[t * 3 + 1] : t * 3 + 1;
+      var i2 = index ? index[t * 3 + 2] : t * 3 + 2;
+      var a = vertexAt(i0);
+      var b = vertexAt(i1);
+      var c = vertexAt(i2);
+      var hits = uniqueSectionPoints([
+        triangleSectionPoint(a, b, planeY, eps),
+        triangleSectionPoint(b, c, planeY, eps),
+        triangleSectionPoint(c, a, planeY, eps)
+      ].filter(Boolean), pointTol);
+      if (hits.length >= 2) {
+        segments.push({
+          a: { x: hits[0].x * 100, z: hits[0].z * 100 },
+          b: { x: hits[1].x * 100, z: hits[1].z * 100 }
+        });
+      }
+    }
+    return segments;
+  }
+
+  function samePoint(a, b, tol) {
+    return Math.hypot(a.x - b.x, a.z - b.z) <= tol;
+  }
+
+  function pathLength(points) {
+    var total = 0;
+    for (var i = 1; i < points.length; i += 1) total += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+    if (points.length > 2 && samePoint(points[0], points[points.length - 1], 0.2)) total += Math.hypot(points[0].x - points[points.length - 1].x, points[0].z - points[points.length - 1].z);
+    return total;
+  }
+
+  function connectSegments(segments) {
+    var unused = segments.slice();
+    var paths = [];
+    var tol = 0.12;
+    while (unused.length) {
+      var first = unused.pop();
+      var path = [first.a, first.b];
+      var extended = true;
+      while (extended) {
+        extended = false;
+        for (var i = unused.length - 1; i >= 0; i -= 1) {
+          var seg = unused[i];
+          var head = path[0];
+          var tail = path[path.length - 1];
+          if (samePoint(tail, seg.a, tol)) {
+            path.push(seg.b); unused.splice(i, 1); extended = true; break;
+          }
+          if (samePoint(tail, seg.b, tol)) {
+            path.push(seg.a); unused.splice(i, 1); extended = true; break;
+          }
+          if (samePoint(head, seg.b, tol)) {
+            path.unshift(seg.a); unused.splice(i, 1); extended = true; break;
+          }
+          if (samePoint(head, seg.a, tol)) {
+            path.unshift(seg.b); unused.splice(i, 1); extended = true; break;
+          }
+        }
+      }
+      if (path.length > 2) paths.push(path);
+    }
+    return paths.map(function (points) {
+      return { points: points, perimeter: pathLength(points), closed: samePoint(points[0], points[points.length - 1], 0.25) };
+    }).sort(function (a, b) { return b.perimeter - a.perimeter; });
+  }
+
+  function buildTopViewSections(model) {
+    return sectionDefs.map(function (section) {
+      var paths = connectSegments(sliceMeshAtWorldY(model, section.y));
+      var maxPerimeter = paths.length ? paths[0].perimeter : 0;
+      var visiblePaths = paths.filter(function (path, index) {
+        return index < 4 && path.perimeter >= Math.max(maxPerimeter * 0.08, 1);
+      });
+      return {
+        name: section.name,
+        label: section.label,
+        color: section.color,
+        height_world: section.y,
+        perimeter_cm: maxPerimeter,
+        paths: visiblePaths
+      };
+    });
+  }
+
+  function drawDashedLine(ctx, x1, y1, x2, y2) {
+    ctx.save();
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function generateTopView() {
+    if (!topViewCanvas || !topViewStatus) return;
+    if (!state.primary) {
+      topViewStatus.textContent = "先に主OBJを読み込んでください。";
+      return;
+    }
+    topViewStatus.textContent = "上面断面図を生成中です...";
+    topViewLinks.innerHTML = "";
+
+    setTimeout(function () {
+      var models = [
+        { key: "primary", label: "主モデル", model: state.primary, dashed: false }
+      ];
+      if (state.compare) models.push({ key: "compare", label: "比較モデル", model: state.compare, dashed: true });
+      var result = models.map(function (entry) {
+        return {
+          key: entry.key,
+          label: entry.label,
+          dashed: entry.dashed,
+          file: entry.model.userData.name,
+          sections: buildTopViewSections(entry.model)
+        };
+      });
+
+      var allPoints = [];
+      result.forEach(function (modelResult) {
+        modelResult.sections.forEach(function (section) {
+          section.paths.forEach(function (path) {
+            path.points.forEach(function (point) { allPoints.push(point); });
+          });
+        });
+      });
+      if (!allPoints.length) {
+        topViewStatus.textContent = "断面ループが見つかりませんでした。モデルの向きや断面高さを確認してください。";
+        return;
+      }
+
+      var ctx = topViewCanvas.getContext("2d");
+      var width = topViewCanvas.width;
+      var height = topViewCanvas.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      var minX = Math.min.apply(null, allPoints.map(function (p) { return p.x; }));
+      var maxX = Math.max.apply(null, allPoints.map(function (p) { return p.x; }));
+      var minZ = Math.min.apply(null, allPoints.map(function (p) { return p.z; }));
+      var maxZ = Math.max.apply(null, allPoints.map(function (p) { return p.z; }));
+      minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+      minZ = Math.min(minZ, 0); maxZ = Math.max(maxZ, 0);
+      var pad = 54;
+      var legendW = 250;
+      var plotW = width - pad * 2 - legendW;
+      var plotH = height - pad * 2;
+      var scale = Math.min(plotW / Math.max(maxX - minX, 1), plotH / Math.max(maxZ - minZ, 1));
+      var ox = pad + plotW / 2 - ((minX + maxX) / 2) * scale;
+      var oy = pad + plotH / 2 + ((minZ + maxZ) / 2) * scale;
+      function tx(point) { return ox + point.x * scale; }
+      function ty(point) { return oy - point.z * scale; }
+
+      ctx.strokeStyle = "#d8dde4";
+      ctx.lineWidth = 1.4;
+      drawDashedLine(ctx, tx({ x: 0, z: minZ }), ty({ x: 0, z: minZ }), tx({ x: 0, z: maxZ }), ty({ x: 0, z: maxZ }));
+      drawDashedLine(ctx, tx({ x: minX, z: 0 }), ty({ x: minX, z: 0 }), tx({ x: maxX, z: 0 }), ty({ x: maxX, z: 0 }));
+      ctx.fillStyle = "#6e7681";
+      ctx.font = "16px system-ui, sans-serif";
+      ctx.fillText("前", tx({ x: 0, z: maxZ }) + 10, ty({ x: 0, z: maxZ }) + 18);
+      ctx.fillText("後", tx({ x: 0, z: minZ }) + 10, ty({ x: 0, z: minZ }) - 8);
+
+      result.forEach(function (modelResult) {
+        modelResult.sections.forEach(function (section) {
+          ctx.strokeStyle = section.color;
+          ctx.lineWidth = modelResult.dashed ? 2.2 : 3;
+          ctx.setLineDash(modelResult.dashed ? [10, 7] : []);
+          section.paths.forEach(function (path) {
+            if (path.points.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(tx(path.points[0]), ty(path.points[0]));
+            for (var i = 1; i < path.points.length; i += 1) ctx.lineTo(tx(path.points[i]), ty(path.points[i]));
+            if (path.closed) ctx.closePath();
+            ctx.stroke();
+          });
+        });
+      });
+      ctx.setLineDash([]);
+
+      var lx = width - legendW + 10;
+      var ly = 42;
+      ctx.fillStyle = "#2f363d";
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillText("測定断面", lx, ly);
+      ly += 28;
+      sectionDefs.forEach(function (section) {
+        var primary = result[0].sections.find(function (item) { return item.name === section.name; });
+        var compare = result[1] && result[1].sections.find(function (item) { return item.name === section.name; });
+        ctx.strokeStyle = section.color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, ly - 4);
+        ctx.lineTo(lx + 34, ly - 4);
+        ctx.stroke();
+        ctx.fillStyle = section.color;
+        ctx.font = "bold 16px system-ui, sans-serif";
+        ctx.fillText(section.label + ": " + (primary && primary.perimeter_cm ? primary.perimeter_cm.toFixed(2) + " cm" : "--"), lx + 45, ly + 2);
+        if (compare) {
+          ctx.fillStyle = "#6e7681";
+          ctx.font = "13px system-ui, sans-serif";
+          ctx.fillText("比較: " + (compare.perimeter_cm ? compare.perimeter_cm.toFixed(2) + " cm" : "--"), lx + 45, ly + 21);
+          ly += 46;
+        } else {
+          ly += 34;
+        }
+      });
+      ctx.fillStyle = "#6e7681";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText("実線=主 / 破線=比較", lx, height - 28);
+
+      topViewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+      var jsonBlob = new Blob([JSON.stringify({ generated_at: new Date().toISOString(), models: result }, null, 2)], { type: "application/json" });
+      var jsonUrl = URL.createObjectURL(jsonBlob);
+      topViewUrls = [jsonUrl];
+      topViewLinks.innerHTML = '<a download="quack-contour-topview.png" href="' + topViewCanvas.toDataURL("image/png") + '">PNG</a>' +
+        '<a download="quack-contour-topview.json" href="' + jsonUrl + '">JSON</a>';
+      topViewStatus.textContent = "上面断面図を生成しました。";
+    }, 20);
+  }
+
   function loadFile(file, kind) {
     if (!file) return;
     var reader = new FileReader();
@@ -295,6 +591,7 @@
         updateLayout();
         updateSceneVisibility();
         updateDiagnostics();
+        clearTopViewOutput();
         fitView();
       }).catch(function (error) {
         supportText.textContent = error.message;
@@ -480,6 +777,7 @@
 
   document.getElementById("layout-mode").addEventListener("change", function (event) { state.layout = event.target.value; updateLayout(); fitView(); });
   document.getElementById("fit-view").addEventListener("click", fitView);
+  if (generateTopViewButton) generateTopViewButton.addEventListener("click", generateTopView);
   document.getElementById("fit-view-floating").addEventListener("click", fitView);
   document.getElementById("reset-view").addEventListener("click", fitView);
   document.getElementById("grid-floating").addEventListener("click", function () {

@@ -285,6 +285,40 @@ button, input, select { font: inherit; }
 .diag-card dt, .diag-card dd { margin: 0; }
 .diag-card dd { color: #eef4fb; font-weight: 800; }
 
+
+.topview-canvas {
+  width: 100%;
+  aspect-ratio: 960 / 620;
+  height: auto;
+  display: block;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.output-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.output-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #131922;
+  color: var(--accent);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.output-links a:hover { border-color: #3a4658; }
 @media (max-width: 1100px) {
   body { overflow: auto; }
   .app-header { height: auto; grid-template-columns: 1fr; }
