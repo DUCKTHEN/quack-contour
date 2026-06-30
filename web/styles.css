@@ -67,6 +67,7 @@ button, input, select { font: inherit; }
 .support-icon { width: 34px; height: 34px; object-fit: contain; }
 
 .top-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.file-inline input { display: none; }
 .ghost-button, button, .file-button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -166,8 +167,35 @@ button, input, select { font: inherit; }
 }
 #viewer { width: 100%; height: 100%; display: block; }
 
+.underlay-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  pointer-events: none;
+}
+
+.underlay-layer.is-visible { display: block; }
+
+.underlay-layer img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: 72%;
+  max-height: 72%;
+  opacity: 0.45;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.viewer-wrap.is-underlay-move { cursor: move; }
+.viewer-wrap.is-underlay-move canvas { cursor: move; }
+.top-actions .is-active { background: var(--accent); color: #111; border-color: var(--accent); }
+
 .view-toolbar {
   position: absolute;
+  z-index: 4;
   left: 14px;
   bottom: 14px;
   display: flex;
@@ -188,6 +216,7 @@ button, input, select { font: inherit; }
 
 .drop-hint {
   position: absolute;
+  z-index: 5;
   inset: 20px;
   display: none;
   place-items: center;

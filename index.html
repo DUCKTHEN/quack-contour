@@ -23,6 +23,9 @@
       <span id="support-text">OBJを読み込んで、体型シルエットと断面の見え方を確認できます。</span>
     </div>
     <nav class="top-actions" aria-label="primary actions">
+      <label class="ghost-button file-inline">画像<input id="underlay-file" type="file" accept="image/*"></label>
+      <button id="move-underlay" type="button" class="ghost-button">下絵を動かす</button>
+      <button id="clear-underlay" type="button" class="ghost-button">下絵削除</button>
       <a class="ghost-button" href="https://github.com/DUCKTHEN/quack-contour">GitHub</a>
       <a class="ghost-button" href="README.md">README</a>
     </nav>
@@ -77,6 +80,9 @@
 
     <section class="viewer-wrap" aria-label="3D preview">
       <canvas id="viewer"></canvas>
+      <div id="underlay-layer" class="underlay-layer" aria-hidden="true">
+        <img id="underlay-image" alt="">
+      </div>
       <div class="view-toolbar" aria-label="view toggles">
         <button id="fit-view-floating" type="button" title="画面に合わせる">⛶</button>
         <button id="grid-floating" type="button" title="床グリッド">#</button>

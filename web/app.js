@@ -35,7 +35,18 @@
     primaryOpacity: 1,
     compareOpacity: 1,
     primaryColor: "#202020",
-    compareColor: "#9aa3aa"
+    compareColor: "#9aa3aa",
+    underlay: {
+      loaded: false,
+      move: false,
+      dragging: false,
+      x: 0,
+      y: 0,
+      scale: 1,
+      rotation: 0,
+      lastX: 0,
+      lastY: 0
+    }
   };
 
   var grid = new THREE.GridHelper(7, 28, 0xd5dde7, 0xe5ebf2);
@@ -59,6 +70,11 @@
   var supportText = document.getElementById("support-text");
   var objWorker = window.Worker ? new Worker("web/obj-worker.js") : null;
   var parseJobId = 0;
+  var underlayFile = document.getElementById("underlay-file");
+  var underlayLayer = document.getElementById("underlay-layer");
+  var underlayImage = document.getElementById("underlay-image");
+  var moveUnderlayButton = document.getElementById("move-underlay");
+  var clearUnderlayButton = document.getElementById("clear-underlay");
 
   function makeMaterial(color, opacity) {
     return new THREE.MeshLambertMaterial({
@@ -171,6 +187,48 @@
       triangleCount: parsed.triangleCount,
       byteLength: parsed.byteLength
     };
+  }
+
+  function loadUnderlay(file) {
+    if (!file || !underlayImage || !underlayLayer) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      state.underlay.loaded = true;
+      state.underlay.x = 0;
+      state.underlay.y = 0;
+      state.underlay.scale = 1;
+      state.underlay.rotation = 0;
+      underlayImage.src = String(reader.result || "");
+      underlayLayer.classList.add("is-visible");
+      updateUnderlay();
+      setUnderlayMove(true);
+      supportText.textContent = "下絵を読み込みました。ドラッグで移動、ホイールで拡大縮小、Shift+ホイールで回転できます。";
+    };
+    reader.onerror = function () {
+      supportText.textContent = "下絵画像を読み込めませんでした。";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateUnderlay() {
+    if (!underlayImage) return;
+    underlayImage.style.transform = "translate(-50%, -50%) translate(" + state.underlay.x + "px, " + state.underlay.y + "px) scale(" + state.underlay.scale + ") rotate(" + state.underlay.rotation + "deg)";
+  }
+
+  function setUnderlayMove(active) {
+    state.underlay.move = Boolean(active && state.underlay.loaded);
+    wrap.classList.toggle("is-underlay-move", state.underlay.move);
+    if (moveUnderlayButton) moveUnderlayButton.classList.toggle("is-active", state.underlay.move);
+  }
+
+  function clearUnderlay() {
+    state.underlay.loaded = false;
+    state.underlay.dragging = false;
+    state.underlay.move = false;
+    if (underlayImage) underlayImage.removeAttribute("src");
+    if (underlayLayer) underlayLayer.classList.remove("is-visible");
+    setUnderlayMove(false);
+    supportText.textContent = "下絵を削除しました。";
   }
 
   function normalizeMesh(mesh) {
@@ -381,6 +439,9 @@
 
   primaryFile.addEventListener("change", function (event) { loadFile(event.target.files[0], "primary"); });
   compareFile.addEventListener("change", function (event) { loadFile(event.target.files[0], "compare"); });
+  if (underlayFile) underlayFile.addEventListener("change", function (event) { loadUnderlay(event.target.files[0]); });
+  if (moveUnderlayButton) moveUnderlayButton.addEventListener("click", function () { setUnderlayMove(!state.underlay.move); });
+  if (clearUnderlayButton) clearUnderlayButton.addEventListener("click", clearUnderlay);
 
   document.getElementById("show-primary").addEventListener("change", updateLayout);
   document.getElementById("show-compare").addEventListener("change", updateLayout);
@@ -419,12 +480,29 @@
   });
 
   canvas.addEventListener("pointerdown", function (event) {
+    if (state.underlay.move && state.underlay.loaded) {
+      state.underlay.dragging = true;
+      state.underlay.lastX = event.clientX;
+      state.underlay.lastY = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      return;
+    }
     controls.dragging = true;
     controls.lastX = event.clientX;
     controls.lastY = event.clientY;
     canvas.setPointerCapture(event.pointerId);
   });
   canvas.addEventListener("pointermove", function (event) {
+    if (state.underlay.dragging) {
+      var ux = event.clientX - state.underlay.lastX;
+      var uy = event.clientY - state.underlay.lastY;
+      state.underlay.lastX = event.clientX;
+      state.underlay.lastY = event.clientY;
+      state.underlay.x += ux;
+      state.underlay.y += uy;
+      updateUnderlay();
+      return;
+    }
     if (!controls.dragging) return;
     var dx = event.clientX - controls.lastX;
     var dy = event.clientY - controls.lastY;
@@ -434,11 +512,26 @@
     controls.pitch = Math.max(-0.65, Math.min(0.65, controls.pitch - dy * 0.006));
   });
   canvas.addEventListener("pointerup", function (event) {
+    if (state.underlay.dragging) {
+      state.underlay.dragging = false;
+      canvas.releasePointerCapture(event.pointerId);
+      return;
+    }
     controls.dragging = false;
     canvas.releasePointerCapture(event.pointerId);
   });
   canvas.addEventListener("wheel", function (event) {
     event.preventDefault();
+    if (state.underlay.move && state.underlay.loaded) {
+      if (event.shiftKey) {
+        state.underlay.rotation += event.deltaY > 0 ? 2 : -2;
+      } else {
+        var zoomFactor = event.deltaY > 0 ? 0.94 : 1.06;
+        state.underlay.scale = Math.max(0.1, Math.min(8, state.underlay.scale * zoomFactor));
+      }
+      updateUnderlay();
+      return;
+    }
     controls.distance = Math.max(3.4, Math.min(18, controls.distance + event.deltaY * 0.008));
   }, { passive: false });
 
