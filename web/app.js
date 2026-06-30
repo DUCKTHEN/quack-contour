@@ -51,6 +51,7 @@
 
   var grid = new THREE.GridHelper(7, 28, 0xd5dde7, 0xe5ebf2);
   grid.position.y = 0;
+  grid.visible = false;
   scene.add(grid);
 
   var guides = new THREE.Group();
@@ -68,6 +69,7 @@
   var compareName = document.getElementById("compare-name");
   var diagnostics = document.getElementById("diagnostics");
   var supportText = document.getElementById("support-text");
+  var viewerEmpty = document.getElementById("viewer-empty");
   var objWorker = window.Worker ? new Worker("web/obj-worker.js") : null;
   var parseJobId = 0;
   var underlayFile = document.getElementById("underlay-file");
@@ -76,6 +78,16 @@
   var moveUnderlayButton = document.getElementById("move-underlay");
   var clearUnderlayButton = document.getElementById("clear-underlay");
 
+  function updateSceneVisibility() {
+    var hasModel = Boolean(state.primary || state.compare);
+    grid.visible = hasModel && state.showGrid;
+    guides.visible = hasModel && state.showGuides;
+    if (viewerEmpty) viewerEmpty.classList.toggle("is-hidden", hasModel || state.underlay.loaded);
+  }
+
+  function hasAnyModel() {
+    return Boolean(state.primary || state.compare);
+  }
   function makeMaterial(color, opacity) {
     return new THREE.MeshLambertMaterial({
       color: new THREE.Color(color),
@@ -201,6 +213,7 @@
       underlayImage.src = String(reader.result || "");
       underlayLayer.classList.add("is-visible");
       updateUnderlay();
+      updateSceneVisibility();
       setUnderlayMove(true);
       supportText.textContent = "下絵を読み込みました。ドラッグで移動、ホイールで拡大縮小、Shift+ホイールで回転できます。";
     };
@@ -228,6 +241,7 @@
     if (underlayImage) underlayImage.removeAttribute("src");
     if (underlayLayer) underlayLayer.classList.remove("is-visible");
     setUnderlayMove(false);
+    updateSceneVisibility();
     supportText.textContent = "下絵を削除しました。";
   }
 
@@ -279,6 +293,7 @@
         if (kind === "compare") compareName.textContent = "比較モデル: " + file.name;
         supportText.textContent = kind === "primary" ? "主モデルを読み込みました。比較OBJを追加できます。" : "比較モデルを読み込みました。濃さや配置を調整できます。";
         updateLayout();
+        updateSceneVisibility();
         updateDiagnostics();
         fitView();
       }).catch(function (error) {
@@ -334,8 +349,8 @@
       var child = guides.children.pop();
       disposeObject(child);
     }
-    guides.visible = state.showGuides;
-    if (!state.showGuides) return;
+    guides.visible = hasAnyModel() && state.showGuides;
+    if (!hasAnyModel() || !state.showGuides) return;
 
     var levels = [3.42, 2.82, 2.62, 2.38, 1.92, 1.42, 0.98];
     var colors = [0x8a603e, 0x9156dc, 0xd90535, 0xf58722, 0x0d8cc7, 0x37985f, 0x202020];
@@ -445,8 +460,8 @@
 
   document.getElementById("show-primary").addEventListener("change", updateLayout);
   document.getElementById("show-compare").addEventListener("change", updateLayout);
-  document.getElementById("show-guides").addEventListener("change", function (event) { state.showGuides = event.target.checked; updateGuides(); });
-  document.getElementById("show-grid").addEventListener("change", function (event) { state.showGrid = event.target.checked; grid.visible = state.showGrid; setActiveButton("grid-floating", state.showGrid); });
+  document.getElementById("show-guides").addEventListener("change", function (event) { state.showGuides = event.target.checked; updateGuides(); updateSceneVisibility(); });
+  document.getElementById("show-grid").addEventListener("change", function (event) { state.showGrid = event.target.checked; updateSceneVisibility(); setActiveButton("grid-floating", state.showGrid); });
   document.getElementById("orthographic").addEventListener("change", function (event) { state.orthographic = event.target.checked; setActiveButton("camera-floating", state.orthographic); });
 
   document.getElementById("primary-color").addEventListener("input", function (event) { state.primaryColor = event.target.value; updateMaterial("primary"); });
@@ -469,7 +484,7 @@
   document.getElementById("reset-view").addEventListener("click", fitView);
   document.getElementById("grid-floating").addEventListener("click", function () {
     state.showGrid = !state.showGrid;
-    grid.visible = state.showGrid;
+    updateSceneVisibility();
     document.getElementById("show-grid").checked = state.showGrid;
     setActiveButton("grid-floating", state.showGrid);
   });
@@ -551,6 +566,7 @@
   setActiveButton("camera-floating", state.orthographic);
   updateDiagnostics();
   updateGuides();
+  updateSceneVisibility();
   fitView();
   render();
 }());
