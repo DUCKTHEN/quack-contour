@@ -1,0 +1,7 @@
+* text=auto
+*.md text working-tree-encoding=UTF-8
+*.py text working-tree-encoding=UTF-8
+*.csv text working-tree-encoding=UTF-8
+*.js text working-tree-encoding=UTF-8
+*.css text working-tree-encoding=UTF-8
+*.html text working-tree-encoding=UTF-8

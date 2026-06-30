@@ -1,0 +1,8 @@
+﻿name,label,color,height_from_floor_cm,height_ratio,expected_cm,scan_around_cm,scan_step_cm,select,scan
+neck,首,#6F4E37,,0.848,,4.0,0.25,closest,true
+shoulder,肩,#8D4ED8,,0.768,,8.0,0.25,closest,true
+bust,バスト,#C00028,115.0,,,6.0,0.25,closest,true
+underbust,アンダーバスト,#E67E22,108.25,,,4.0,0.25,closest,true
+waist,ウエスト,#0077B6,,0.632,,8.0,0.25,closest,true
+upperhip,ヒップ上側,#2E8B57,,0.566,,8.0,0.25,closest,true
+hip,ヒップ,#1E1E1E,,0.504,,8.0,0.25,closest,true

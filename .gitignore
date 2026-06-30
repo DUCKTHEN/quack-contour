@@ -1,0 +1,33 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local logs and temporary files
+*.log
+*.tmp
+*.bak
+*.local
+
+# User model data and generated output
+*.obj
+*.fbx
+*.zprj
+*.zip
+*.7z
+outputs/*
+uploads/*
+!outputs/.gitkeep
+!uploads/.gitkeep
+
+# Codex/local workspace artifacts
+.codex/
+.agents/
