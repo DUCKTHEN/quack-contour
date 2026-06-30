@@ -1,58 +1,51 @@
-# Quack Contour Web Version Plan
+# Web Version Plan
 
-Quack Contour currently runs as a local Python server at `http://127.0.0.1:8765/`.
+Quack Contour now includes a first static GitHub Pages entry point at the repository root.
 
-The planned `github.io` version should be a static browser app, similar in spirit to Quack Trace.
+Current files:
 
-## Goal
+- `index.html`
+- `web/styles.css`
+- `web/app.js`
 
-Make a public web version that modelers can open without installing Python, while keeping private model data local in the user's browser.
+## Current Static Web Scope
 
-## Important Constraint
+The first browser version is intentionally lightweight:
 
-GitHub Pages can serve static files only. It cannot run the current Python endpoints:
+- Load OBJ files directly in the browser.
+- Preview a primary model and optional comparison model.
+- Switch between side-by-side and overlay layouts.
+- Change model colors and opacity.
+- Show section guide lines as visual reference.
+- Show basic model diagnostics.
+- Keep model data local to the browser.
 
-- `/api/mesh`
-- `/api/lines`
-- `/api/generate`
+This version is meant to make the project easy to try from GitHub Pages, like Quack Trace.
 
-So the web version needs browser-side processing or a separate hosted backend.
+## Not Yet Ported From The Local Version
 
-## Recommended Direction
+The local Python app still contains the richer workflow:
 
-Use a browser-only version first.
+- Detailed section guide editing.
+- Top-view PNG and JSON generation.
+- Masking and lasso workflows.
+- Underlay image transform controls.
+- Doodle tools and undo/redo integration.
+- Full comparison table and export workflow.
 
-- Parse OBJ files in the browser.
-- Render models with Three.js.
-- Keep imported files in browser memory only.
-- Use Web Workers for heavy parsing and section calculations.
-- Start with preview, silhouette, guide editing, opacity controls, doodles, and diagnostics.
-- Add top-view PNG/JSON generation only after performance is acceptable.
+## Next Steps
 
-This keeps the privacy story simple: no model upload, no server storage.
+1. Move browser OBJ parsing into a Web Worker so large files do not block the UI.
+2. Add section guide editing to the static version.
+3. Add top-view generation for checked sections only.
+4. Add Quack Trace style doodle tools and pen color controls.
+5. Add underlay image move, scale, and rotate controls.
+6. Add GitHub Pages publishing notes and a release checklist.
 
-## Local Version
+## 日本語メモ
 
-Keep the Python version as the heavier desktop/local tool.
+リポジトリ直下に、GitHub Pages向けの最初のWeb版を追加しました。
 
-The local version can continue to support:
+現時点では「Webからすぐ試せる軽量版」です。OBJの読み込み、主モデルと比較モデルの表示、並べる・重ねる、色と濃さの変更、簡易モデル診断ができます。
 
-- Larger OBJ files.
-- Generated PNG/JSON files in `outputs/`.
-- Temporary uploads in `uploads/`.
-- More CPU-heavy section generation.
-
-## Web Version Milestones
-
-1. Create a static `docs/` or `web/` entry point for GitHub Pages.
-2. Move reusable UI strings, colors, and section definitions out of embedded Python HTML.
-3. Add browser OBJ import and Three.js preview.
-4. Add primary/compare model opacity, visibility, and layout controls.
-5. Add guide line editing and model diagnostics.
-6. Add underlay image and doodle tools.
-7. Prototype browser-side top-view export in a Web Worker.
-8. Test with small, medium, and dense OBJ files.
-
-## Privacy Text for Web Version
-
-Imported model files are read in the user's browser. They are not uploaded to the project author, GitHub, or any server by the static web app.
+まだローカルPython版の全機能は移植していません。断面編集、上面図生成、マスク、下絵、落書き、エクスポートまわりは今後段階的にWeb版へ移していきます。
