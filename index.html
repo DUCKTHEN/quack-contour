@@ -23,6 +23,7 @@
       <span id="support-text">OBJを読み込んで、体型シルエットと断面の見え方を確認できます。</span>
     </div>
     <nav class="top-actions" aria-label="primary actions">
+      <button id="generate-top-view-header" type="button" class="ghost-button">断面図</button>
       <label class="ghost-button file-inline">画像<input id="underlay-file" type="file" accept="image/*"></label>
       <button id="move-underlay" type="button" class="ghost-button">下絵を動かす</button>
       <button id="clear-underlay" type="button" class="ghost-button">下絵削除</button>
@@ -43,7 +44,7 @@
           <input id="compare-file" type="file" accept=".obj,text/plain">
         </label>
       </div>
-      <button id="generate-top-view" type="button" class="wide-button primary">上面図生成</button>
+      <button id="generate-top-view" type="button" class="wide-button primary">断面図生成</button>
 
       <section class="control-section">
         <h2>表示</h2>
@@ -115,6 +116,7 @@
       <section>
         <h2>上面断面図</h2>
         <p id="topview-status" class="hint">主OBJを読み込むと、断面の上面図を生成できます。</p>
+        <button id="generate-top-view-panel" type="button" class="wide-button primary">断面図を作る</button>
         <canvas id="topview-canvas" class="topview-canvas" width="960" height="620" aria-label="top view section output"></canvas>
         <div id="topview-links" class="output-links"></div>
       </section>

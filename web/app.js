@@ -81,6 +81,8 @@
   var moveUnderlayButton = document.getElementById("move-underlay");
   var clearUnderlayButton = document.getElementById("clear-underlay");
   var generateTopViewButton = document.getElementById("generate-top-view");
+  var generateTopViewHeaderButton = document.getElementById("generate-top-view-header");
+  var generateTopViewPanelButton = document.getElementById("generate-top-view-panel");
   var topViewCanvas = document.getElementById("topview-canvas");
   var topViewStatus = document.getElementById("topview-status");
   var topViewLinks = document.getElementById("topview-links");
@@ -397,7 +399,7 @@
     topViewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
     topViewUrls = [];
     if (topViewLinks) topViewLinks.innerHTML = "";
-    if (topViewStatus) topViewStatus.textContent = state.primary ? "上面図生成を押すと、現在の断面ガイドから断面図を作成します。" : "主OBJを読み込むと、断面の上面図を生成できます。";
+    if (topViewStatus) topViewStatus.textContent = state.primary ? "断面図生成を押すと、現在の断面ガイドから断面図を作成します。" : "主OBJを読み込むと、断面の上面図を生成できます。";
     if (topViewCanvas) {
       var ctx = topViewCanvas.getContext("2d");
       ctx.clearRect(0, 0, topViewCanvas.width, topViewCanvas.height);
@@ -551,6 +553,7 @@
     if (!topViewCanvas || !topViewStatus) return;
     if (!state.primary) {
       topViewStatus.textContent = "先に主OBJを読み込んでください。";
+      if (topViewCanvas) topViewCanvas.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
     topViewStatus.textContent = "上面断面図を生成中です...";
@@ -671,6 +674,7 @@
       topViewLinks.innerHTML = '<a download="quack-contour-topview.png" href="' + topViewCanvas.toDataURL("image/png") + '">PNG</a>' +
         '<a download="quack-contour-topview.json" href="' + jsonUrl + '">JSON</a>';
       topViewStatus.textContent = "上面断面図を生成しました。";
+      if (topViewCanvas) topViewCanvas.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 20);
   }
 
@@ -878,7 +882,9 @@
 
   document.getElementById("layout-mode").addEventListener("change", function (event) { state.layout = event.target.value; updateLayout(); fitView(); });
   document.getElementById("fit-view").addEventListener("click", fitView);
-  if (generateTopViewButton) generateTopViewButton.addEventListener("click", generateTopView);
+  [generateTopViewButton, generateTopViewHeaderButton, generateTopViewPanelButton].forEach(function (button) {
+    if (button) button.addEventListener("click", generateTopView);
+  });
   document.getElementById("fit-view-floating").addEventListener("click", fitView);
   document.getElementById("reset-view").addEventListener("click", fitView);
   document.getElementById("grid-floating").addEventListener("click", function () {
