@@ -101,6 +101,24 @@ button, input, select { font: inherit; }
 
 .left-panel { resize: horizontal; }
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.first-section {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.import-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.right-panel .file-button {
+  min-height: 42px;
+  padding: 9px 10px;
+  line-height: 1.25;
+}
 .file-button { display: flex; align-items: center; justify-content: center; text-align: center; }
 .file-button input { display: none; }
 

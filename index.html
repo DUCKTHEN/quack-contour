@@ -34,17 +34,9 @@
 
   <main class="app-shell">
     <aside class="panel left-panel" aria-label="controls">
-      <div class="action-grid">
-        <label class="file-button primary">
-          主OBJインポート
-          <input id="primary-file" type="file" accept=".obj,text/plain">
-        </label>
-        <label class="file-button">
-          比較OBJインポート
-          <input id="compare-file" type="file" accept=".obj,text/plain">
-        </label>
-      </div>
-      <button id="generate-top-view" type="button" class="wide-button primary">断面図生成</button>
+      <section class="control-section action-section first-section">
+        <button id="generate-top-view" type="button" class="wide-button primary">断面図生成</button>
+      </section>
 
       <section class="control-section">
         <h2>表示</h2>
@@ -107,6 +99,10 @@
         <h2>読み込みファイル</h2>
         <div class="file-name" id="primary-name">主モデル: --</div>
         <div class="file-name" id="compare-name">比較モデル: --</div>
+        <div class="import-grid">
+          <label class="file-button primary">主OBJインポート<input id="primary-file" type="file" accept=".obj,text/plain"></label>
+          <label class="file-button">比較OBJインポート<input id="compare-file" type="file" accept=".obj,text/plain"></label>
+        </div>
       </section>
       <section>
         <h2>モデル診断</h2>
