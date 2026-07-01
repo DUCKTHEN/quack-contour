@@ -1,4 +1,7 @@
 # Quack Contour
+<img width="1277" height="665" alt="image" src="https://github.com/user-attachments/assets/329fe712-a2ed-4e61-bcfa-64af179f439e" />
+<img width="1790" height="1080" alt="interactive_sections_20260701_094119" src="https://github.com/user-attachments/assets/69b8c042-159b-4058-a823-5f6759c05f1a" />
+<img width="1620" height="1260" alt="interactive_sections_compare_20260701_093230" src="https://github.com/user-attachments/assets/ea6aa818-7d98-4d29-b166-72a4ccafe6b6" />
 
 Quack Contour is an experimental OBJ avatar contour tool for CG designers, digital fashion workflows, and modelers who want to inspect body shape from more than one angle.
 
