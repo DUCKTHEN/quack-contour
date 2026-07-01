@@ -272,7 +272,7 @@ def html_page() -> bytes:
     .brand-sound-button:active .duck { transform:translateY(1px) scale(.98); }
     .brand-sound-button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
     .header-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
-    .header-tool-button, .language-toggle { min-width:88px; height:34px; padding:0 14px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; color:var(--ink); font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
+    .header-tool-button, .language-toggle { min-width:88px; height:34px; margin:0; padding:0 14px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; color:var(--ink); font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
     .header-tool-button:hover, .header-tool-button:focus-visible, .language-toggle:hover, .language-toggle:focus-visible { border-color:rgba(244,191,36,.72); color:#fff; outline:none; }
     .history-actions { display:flex; align-items:center; gap:6px; margin-right:4px; }
     .history-button { min-width:54px; height:34px; padding:0 10px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; color:var(--accent); font-size:12px; font-weight:800; line-height:1; cursor:pointer; user-select:none; }
@@ -327,11 +327,17 @@ def html_page() -> bytes:
     button { height:36px; border:1px solid rgba(244,191,36,.36); border-radius:4px; background:var(--accent); color:#171100; font-size:13px; font-weight:800; cursor:pointer; }
     button.secondary { background:#15171c; color:var(--ink); border:1px solid #2b2e35; }
     .compact-button { width:100%; height:32px; margin-top:8px; }
+    .guide-hide-button.active { background:rgba(244,191,36,.16); border-color:rgba(244,191,36,.72); color:var(--accent); box-shadow:0 0 0 1px rgba(244,191,36,.13) inset; }
     button:hover { filter:brightness(1.06); }
     button:disabled { opacity:.55; cursor:progress; }
     .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .button-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:4px; }
     .action-row { padding:0; }
+    .top-output-target { margin-top:7px; display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:6px; }
+    .top-output-target > span { color:var(--muted); font-size:11px; font-weight:800; }
+    .top-output-buttons { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+    .top-output-button { height:28px; min-height:28px; padding:0 6px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .top-output-button.active { background:rgba(244,191,36,.18); border-color:rgba(244,191,36,.75); color:var(--accent); }
     .underlay-actions { grid-template-columns:1fr 1fr 1fr; margin-top:7px; }
     .file-action { height:36px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; color:var(--ink); font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; margin:0; user-select:none; }
     .file-action:hover { filter:brightness(1.06); border-color:rgba(244,191,36,.36); }
@@ -349,7 +355,6 @@ def html_page() -> bytes:
     .model-opacity-control { display:grid; grid-template-columns:minmax(76px,.9fr) minmax(82px,1fr) 38px; align-items:center; gap:7px; margin:0; color:var(--muted); font-size:11px; font-weight:800; }
     .model-opacity-control input[type=range] { height:18px; min-width:0; padding:0; accent-color:var(--accent); }
     .model-opacity-value { color:var(--accent); font-size:11px; font-weight:900; text-align:right; font-variant-numeric:tabular-nums; }
-    .background-color-row { grid-template-columns:1fr; }
     .model-color { display:flex; align-items:center; justify-content:space-between; gap:6px; margin:0; color:var(--muted); font-size:11px; }
     .model-toggle { display:inline-flex; align-items:center; gap:7px; margin:0; color:var(--ink); font-size:12px; cursor:pointer; user-select:none; }
     .model-toggle input { width:16px; height:16px; margin:0; padding:0; accent-color:var(--accent); }
@@ -366,6 +371,9 @@ def html_page() -> bytes:
     .view-icon-button:hover, .view-icon-button:focus-visible { border-color:rgba(244,191,36,.78); color:#1f2630; filter:none; outline:none; }
     .view-icon-button.active, .view-icon-button[aria-pressed="true"] { border-color:rgba(244,191,36,.88); background:rgba(242,192,55,.96); color:#171100; }
     .view-icon-button svg { width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+    .color-quick-button { position:relative; margin:0; overflow:hidden; }
+    .color-quick-button input[type=color] { position:absolute; inset:0; width:100%; min-width:0; height:100%; padding:0; border:0; opacity:0; cursor:pointer; }
+    .color-quick-swatch { width:18px; height:18px; border:1px solid rgba(255,255,255,.82); border-radius:3px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.2); pointer-events:none; }
     .hint { color:var(--muted); font-size:11px; line-height:1.45; margin-top:7px; }
     .help-details { margin-top:12px; border-top:1px solid var(--line); padding-top:9px; }
     .help-details summary { cursor:pointer; color:var(--muted); font-size:11px; font-weight:900; list-style:none; user-select:none; }
@@ -434,8 +442,14 @@ def html_page() -> bytes:
     .chip-toggle:hover { border-color:rgba(244,191,36,.42); background:#141a22; }
     .chip-toggle input { flex:0 0 auto; width:15px; height:15px; }
     .chip-toggle span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .compact-button.mask-clear { height:30px; margin-top:6px; color:#ffb4a8; border-color:#3a2525; background:#151315; }
+    .compact-button.mask-clear { height:28px; margin-top:6px; color:#ffb4a8; border-color:#3a2525; background:rgba(54,25,25,.58); }
     .compact-button.mask-clear:hover { border-color:#6a3a31; background:#1b1515; }
+    .mask-shape-select { display:grid; grid-template-columns:72px minmax(0,1fr); align-items:center; gap:6px; margin-top:6px; }
+    .mask-shape-select label { margin:0; color:var(--muted); font-size:11px; font-weight:800; }
+    .mask-shape-select select { height:30px; }
+    .guide-toggle-grid { margin-top:0; }
+    .guide-hide-button { height:30px; min-height:30px; margin:0; padding:6px 8px; border:1px solid #252d38; border-radius:5px; background:#11161d; color:var(--ink); font-size:11px; font-weight:800; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .guide-hide-button:hover { border-color:rgba(244,191,36,.42); background:#141a22; filter:none; }
     .option-select { margin-top:12px; }
     .option-select label { margin:0 0 5px; }
     .mesh-count { font-weight:800; color:var(--ink); margin-bottom:8px; font-size:12px; line-height:1.35; overflow-wrap:anywhere; }
@@ -525,6 +539,15 @@ def html_page() -> bytes:
           <button type="button" id="compareReportButton" class="secondary" data-i18n="makeCompare">比較図生成</button>
           <button type="button" id="exportSilhouetteButton" class="secondary" data-i18n="exportSilhouette">シルエットPNG</button>
         </div>
+        <div class="top-output-target" role="group" aria-label="Top view output target">
+          <span data-i18n="topOutputTarget">&#19978;&#38754;&#22259;&#23550;&#35937;</span>
+          <div class="top-output-buttons">
+            <button type="button" class="secondary top-output-button active" data-top-output-target="primary" data-i18n="topOutputPrimary">&#20027;</button>
+            <button type="button" class="secondary top-output-button" data-top-output-target="compare" data-i18n="topOutputCompare">&#27604;&#36611;</button>
+            <button type="button" class="secondary top-output-button" data-top-output-target="both" data-i18n="topOutputBoth">&#20001;&#26041;</button>
+          </div>
+          <input type="hidden" id="topOutputTarget" value="primary">
+        </div>
         <div class="status" id="status"></div>
       </div>
       <div class="panel-section">
@@ -554,9 +577,6 @@ def html_page() -> bytes:
               <button type="button" id="heightScaleClear" class="secondary" data-i18n="heightScaleClear">&#35299;&#38500;</button>
             </div>
             <div class="height-scale-note" id="heightScaleNote"></div>
-          </div>
-          <div class="model-color-row background-color-row">
-            <label class="model-color"><span data-i18n="viewerBgColor">背景色</span><input type="color" id="viewerBgColor" value="#ffffff"></label>
           </div>
           <div class="option-select" style="margin-top:4px;">
             <label data-i18n="compareLayout">比較配置</label>
@@ -598,8 +618,9 @@ def html_page() -> bytes:
         </div>
         <div class="control-group">
           <div class="control-group-title" data-i18n="displayAids">表示補助</div>
-          <div class="option-toggle-grid single">
+          <div class="option-toggle-grid guide-toggle-grid">
             <label class="option-toggle chip-toggle"><input type="checkbox" id="lineGuideOnly" checked><span data-i18n="lineOnly">&#26029;&#38754;&#12460;&#12452;&#12489;&#12434;&#32218;&#12384;&#12369;&#34920;&#31034;</span></label>
+            <button type="button" id="temporaryHideGuidesButton" class="guide-hide-button" aria-pressed="false" data-i18n="hideGuidesForView">&#26029;&#38754;&#12460;&#12452;&#12489;&#12434;&#38750;&#34920;&#31034;</button>
           </div>
         </div>
         <div class="option-select">
@@ -643,6 +664,10 @@ def html_page() -> bytes:
         <button type="button" id="projectionQuickButton" class="view-icon-button" aria-pressed="false" title="Projection">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h10l4 4v7H9l-4-4z"/><path d="M15 7v7H5M15 14l4 4M9 14v4"/></svg>
         </button>
+        <label id="viewerBgColorQuickButton" class="view-icon-button color-quick-button" title="&#32972;&#26223;&#33394;" aria-label="&#32972;&#26223;&#33394;">
+          <span class="color-quick-swatch" id="viewerBgColorSwatch" aria-hidden="true"></span>
+          <input type="color" id="viewerBgColor" value="#ffffff">
+        </label>
         <button type="button" id="fitViewQuickButton" class="view-icon-button" aria-pressed="false" title="Fit view">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H4v4M16 3h4v4M20 17v4h-4M4 17v4h4"/><path d="M9 12h6M12 9v6"/></svg>
         </button>
@@ -705,6 +730,8 @@ const doodleClearButton = document.getElementById('doodleClearButton');
 const doodleColorInput = document.getElementById('doodleColorInput');
 const appSubtitle = document.getElementById('appSubtitle');
 const lineTargetButtons = [...document.querySelectorAll('#lineTargetTabs button')];
+const topOutputTargetInput = document.getElementById('topOutputTarget');
+const topOutputTargetButtons = [...document.querySelectorAll('[data-top-output-target]')];
 const outputImage = document.getElementById('outputImage');
 const outputLinks = document.getElementById('outputLinks');
 const resultTable = document.getElementById('resultTable');
@@ -714,6 +741,7 @@ const maskShapeModeInput = document.getElementById('maskShapeMode');
 const clearMasksButton = document.getElementById('clearMasksButton');
 const showMaskRectsInput = document.getElementById('showMaskRects');
 const lineGuideOnlyInput = document.getElementById('lineGuideOnly');
+const temporaryHideGuidesButton = document.getElementById('temporaryHideGuidesButton');
 const showFloorGridInput = document.getElementById('showFloorGrid');
 const showCenterLinesInput = document.getElementById('showCenterLines');
 const pickSectionHeightInput = document.getElementById('pickSectionHeight') || { checked:false, addEventListener(){} };
@@ -744,6 +772,8 @@ const heightScaleMatchCompareButton = document.getElementById('heightScaleMatchC
 const heightScaleClearButton = document.getElementById('heightScaleClear');
 const heightScaleNote = document.getElementById('heightScaleNote');
 const viewerBgColorInput = document.getElementById('viewerBgColor');
+const viewerBgColorSwatch = document.getElementById('viewerBgColorSwatch');
+const viewerBgColorQuickButton = document.getElementById('viewerBgColorQuickButton');
 const brandSoundButton = document.getElementById('brandSoundButton');
 const duckQuackAudio = typeof Audio !== 'undefined' ? new Audio('/asset/duck-quacking-37392.mp3') : null;
 if (duckQuackAudio) {
@@ -754,18 +784,18 @@ if (duckQuackAudio) {
 const UI_TEXT = {
   ja: {
     toggle:'English', subtitle:'OBJ体型断面ツール', generate:'生成', displayModels:'表示モデル', viewControls:'ビュー操作',
-    fitView:'表示を合わせる', makeTopView:'上面図生成', makeCompare:'比較図生成', exportSilhouette:'シルエットPNG',
+    fitView:'表示を合わせる', makeTopView:'上面図生成', makeCompare:'比較図生成', exportSilhouette:'シルエットPNG', topOutputTarget:'上面図対象', topOutputPrimary:'主', topOutputCompare:'比較', topOutputBoth:'両方', topCompareNeedsModel:'比較モデルを読み込んでください。',
     underlayImage:'画像', moveUnderlay:'下絵を動かす', deleteUnderlay:'下絵削除', underlayLoaded:'下絵を読み込みました。', underlayDeleted:'下絵を削除しました。', underlayMoveHint:'下絵移動中: 左ドラッグで移動、黄色い角ハンドル/ホイールで拡大縮小、上の丸ハンドルで回転。', underlayNoImage:'先に下絵画像を読み込んでください。', importPrimary:'主 OBJインポート', importCompare:'比較 OBJインポート',
-    showPrimary:'主モデルを表示', showCompare:'比較モデルを表示', delete:'削除', primaryColor:'主モデル色', compareColor:'比較色', primaryOpacity:'主モデル濃さ', compareOpacity:'比較濃さ', viewerBgColor:'背景色', compareLayout:'比較配置', sideBySide:'並べる', overlay:'重ねる', makeMask:'マスク作成', maskShape:'\u30de\u30b9\u30af\u5f62\u72b6', maskRect:'\u77e9\u5f62', maskLasso:'\u6295\u3052\u306a\u308f', clearMasks:'マスク削除', showMaskRects:'マスク枠を表示', lineOnly:'断面ガイドを線だけ表示', hideAllGuides:'断面ガイドを一括非表示', showAllGuides:'断面ガイドを一括表示', floorGrid:'床グリッドを表示', centerLines:'中心線を表示', maskTools:'マスク', displayAids:'表示補助', rotationAssist:'回転補助', helpSummary:'操作メモ', renderMode:'表示モード', silhouetteMode:'シルエット表示', outlineMode:'外周線表示', yaw:'水平回転', invertPitch:'上下回転を反転', invertYaw:'左右回転を反転',
+    showPrimary:'主モデルを表示', showCompare:'比較モデルを表示', delete:'削除', primaryColor:'主モデル色', compareColor:'比較色', primaryOpacity:'主モデル濃さ', compareOpacity:'比較濃さ', viewerBgColor:'背景色', compareLayout:'比較配置', sideBySide:'並べる', overlay:'重ねる', makeMask:'マスク作成', maskShape:'\u30de\u30b9\u30af\u5f62\u72b6', maskRect:'\u77e9\u5f62', maskLasso:'\u6295\u3052\u306a\u308f', clearMasks:'マスク削除', showMaskRects:'マスク枠を表示', lineOnly:'断面ガイドを線だけ表示', hideGuidesForView:'\u65ad\u9762\u30ac\u30a4\u30c9\u3092\u975e\u8868\u793a', showGuidesForView:'\u65ad\u9762\u30ac\u30a4\u30c9\u3092\u8868\u793a', hideAllGuides:'断面ガイドを一括非表示', showAllGuides:'断面ガイドを一括表示', floorGrid:'床グリッドを表示', centerLines:'中心線を表示', maskTools:'マスク', displayAids:'表示補助', rotationAssist:'回転補助', helpSummary:'操作メモ', renderMode:'表示モード', silhouetteMode:'シルエット表示', outlineMode:'外周線表示', yaw:'水平回転', invertPitch:'上下回転を反転', invertYaw:'左右回転を反転',
     primaryModel:'主モデル', compareModel:'比較モデル', show:'表示', lineName:'断面名', perimeterLabel:'周囲計', moveHandle:'動かす', lineEmpty:'モデルを読み込むと断面位置を編集できます。', noModel:'モデルを読み込んでください',
     isoDefaultTitle:'', isoDefaultText:'先に主モデルを読み込んでください。', isoNote:'OBJを読み込むと、次の操作をここに表示します。', selectedPrefix:'編集中: ', genericLine:'断面ライン', genericGuide:'断面位置を調整し、必要なら比較モデルや下絵を追加できます。',
     meshVertices:'頂点', meshFaces:'総三角面', meshShown:'プレビュー表示', meshDecimated:'間引き', meshSilhouette:'シルエット', meshFormat:'形式', meshHeight:'身長', screenError:'画面エラー: ', processError:'処理エラー: ', modelLoading:'モデル読み込み中', modelLinesLoading:'モデル読み込み完了。ライン読み込み中', loadComplete:'読み込み完了', loadCompleteCompare:'読み込み完了。比較表示中', modelLoadedLineError:'モデルは読み込み完了。ライン定義: ', mainFirst:'先に主モデルを読み込んでください', compareLoading:'比較モデル読み込み中', compareLoaded:'比較モデル読み込み完了。比較モデルの断面位置を編集中です。', deleteCompareStatus:'比較モデルを削除しました。', deletePrimaryStatus:'主モデルを削除しました。', duckMuted:'今は音を鳴らせませんでした。', masksCleared:'マスクを削除しました。',
     maskCreated:'選択メッシュ面をマスクしました。', needBothModels:'主モデルと比較モデルを読み込んでください', helpText:'左ドラッグで回転。水平回転スライダーで前後左右を確認できます。「マスク作成」ON時は左ドラッグで矩形または投げなわマスクを作成。断面位置は左右の縦バー上の点をドラッグして上下移動。中ボタン・右ドラッグ・Shift+左ドラッグでパン、ホイールで拡大縮小。「表示を合わせる」で現在の向きのまま全体を収めます。ビューキー: 2=正面、8=背面、4/6=左右、5=上面、P=正投影/透視切替。', exportNoModel:'モデルを読み込んでから書き出してください。', pngExportFailed:'PNG書き出しに失敗しました。', silhouettePngLink:'PNG', silhouetteExported:'シルエットPNGを作成しました。', compareGenerating:'比較図生成中', compareFailed:'比較図生成に失敗しました。', compareComplete:'比較図生成完了', tableLine:'ライン', tablePrimary:'主 cm', tableCompare:'比較 cm', tableDiff:'差 cm', generating:'生成中', generateFailed:'生成に失敗しました。', done:'完了', tablePerimeter:'外周 cm', tableHeight:'高さ cm', renderError:'3D表示エラー: ', meshNotFound:'メッシュ形状が見つかりません。', objOnlyError:'現在はOBJのみ対応しています。OBJファイルを選択してください。', fbxBinaryUnsupported:'Binary FBXは未対応です。CLO/MarvelousからASCII FBXまたはOBJで書き出してください。', fbxArraysNotFound:'ASCII FBXのVertices / PolygonVertexIndex配列が見つかりません。', fbxVerticesInvalid:'FBX Vertices配列の数が3で割り切れません。', fileRequired:'OBJパスまたはOBJファイルを指定してください。', resetStatus:'リセットしました。OBJを読み込んでください。', initialStatus:'モデルは未読み込みです。OBJをインポートしてください。'
   },
   en: {
-    toggle:'日本語', subtitle:'OBJ body section tool', generate:'Output', displayModels:'Models', viewControls:'View controls', fitView:'Fit view', makeTopView:'Top view', makeCompare:'Compare report', exportSilhouette:'Silhouette PNG',
+    toggle:'日本語', subtitle:'OBJ body section tool', generate:'Output', displayModels:'Models', viewControls:'View controls', fitView:'Fit view', makeTopView:'Top view', makeCompare:'Compare report', exportSilhouette:'Silhouette PNG', topOutputTarget:'Top view target', topOutputPrimary:'Primary', topOutputCompare:'Compare', topOutputBoth:'Both', topCompareNeedsModel:'Load a compare model first.',
     underlayImage:'Image', moveUnderlay:'Move underlay', deleteUnderlay:'Delete underlay', underlayLoaded:'Underlay image loaded.', underlayDeleted:'Underlay image deleted.', underlayMoveHint:'Underlay move mode: left drag to move; drag yellow corners or wheel to scale; drag the top round handle to rotate.', underlayNoImage:'Import an underlay image first.', importPrimary:'Primary OBJ', importCompare:'Compare OBJ',
-    showPrimary:'Show primary', showCompare:'Show compare', delete:'Delete', primaryColor:'Primary color', compareColor:'Compare color', primaryOpacity:'Primary opacity', compareOpacity:'Compare opacity', viewerBgColor:'Background color', compareLayout:'Compare layout', sideBySide:'Side by side', overlay:'Overlay', makeMask:'Draw mask', maskShape:'Mask shape', maskRect:'Rectangle', maskLasso:'Lasso', clearMasks:'Clear masks', showMaskRects:'Show mask boxes', lineOnly:'Guide lines only', hideAllGuides:'Hide all section guides', showAllGuides:'Show all section guides', floorGrid:'Show floor grid', centerLines:'Show center lines', maskTools:'Mask', displayAids:'Display aids', rotationAssist:'Rotation assist', helpSummary:'Operation notes', renderMode:'View mode', silhouetteMode:'Silhouette', outlineMode:'Outline', yaw:'Horizontal rotation', invertPitch:'Invert up/down rotation', invertYaw:'Invert left/right rotation', primaryModel:'Primary model', compareModel:'Compare model', show:'Show', lineName:'Section name', perimeterLabel:'Perimeter', moveHandle:'Move', lineEmpty:'Load a model to edit section positions.', noModel:'Load a model',
+    showPrimary:'Show primary', showCompare:'Show compare', delete:'Delete', primaryColor:'Primary color', compareColor:'Compare color', primaryOpacity:'Primary opacity', compareOpacity:'Compare opacity', viewerBgColor:'Background color', compareLayout:'Compare layout', sideBySide:'Side by side', overlay:'Overlay', makeMask:'Draw mask', maskShape:'Mask shape', maskRect:'Rectangle', maskLasso:'Lasso', clearMasks:'Clear masks', showMaskRects:'Show mask boxes', lineOnly:'Guide lines only', hideGuidesForView:'Hide section guides', showGuidesForView:'Show section guides', hideAllGuides:'Hide all section guides', showAllGuides:'Show all section guides', floorGrid:'Show floor grid', centerLines:'Show center lines', maskTools:'Mask', displayAids:'Display aids', rotationAssist:'Rotation assist', helpSummary:'Operation notes', renderMode:'View mode', silhouetteMode:'Silhouette', outlineMode:'Outline', yaw:'Horizontal rotation', invertPitch:'Invert up/down rotation', invertYaw:'Invert left/right rotation', primaryModel:'Primary model', compareModel:'Compare model', show:'Show', lineName:'Section name', perimeterLabel:'Perimeter', moveHandle:'Move', lineEmpty:'Load a model to edit section positions.', noModel:'Load a model',
     isoDefaultTitle:'', isoDefaultText:'Import the primary OBJ first.', isoNote:'Next steps appear here as you work.', selectedPrefix:'Editing: ', genericLine:'Section line', genericGuide:'Adjust section positions, then add a compare model or underlay if needed.', meshVertices:'vertices', meshFaces:'total triangles', meshShown:'preview', meshDecimated:'decimated', meshSilhouette:'silhouette', meshFormat:'format', meshHeight:'height', screenError:'Screen error: ', processError:'Process error: ', modelLoading:'Loading model', modelLinesLoading:'Model loaded. Loading section lines', loadComplete:'Loaded', loadCompleteCompare:'Loaded. Showing two-model comparison', modelLoadedLineError:'Model loaded. Line definition: ', mainFirst:'Load a primary model first', compareLoading:'Loading compare model', compareLoaded:'Compare model loaded. Editing compare-model section positions', deleteCompareStatus:'Compare model deleted', deletePrimaryStatus:'Primary model deleted', duckMuted:'The duck could not quack right now.', masksCleared:'Masks cleared',
     maskCreated:'Masked selected mesh faces', needBothModels:'Load both primary and compare models', helpText:'Left drag to rotate. Use horizontal rotation to inspect front, back, and sides. When Draw mask is on, left drag creates a rectangular or lasso mask. Drag the colored dots on the side height bars to move section positions vertically. Middle mouse, right drag, or Shift+left drag pans. Mouse wheel zooms. Fit view frames the current view. View keys follow CLO/Marvelous style: 2 front, 8 back, 4/6 sides, 5 top. Press P to switch orthographic/perspective.', exportNoModel:'Load a model before exporting.', pngExportFailed:'PNG export failed.', silhouettePngLink:'PNG', silhouetteExported:'Silhouette PNG is ready.', compareGenerating:'Generating compare report', compareFailed:'Compare report failed.', compareComplete:'Compare report complete', tableLine:'Line', tablePrimary:'Primary cm', tableCompare:'Compare cm', tableDiff:'Diff cm', generating:'Generating', generateFailed:'Generation failed', done:'Done', tablePerimeter:'Perimeter cm', tableHeight:'Height cm', renderError:'3D display error: ', meshNotFound:'Mesh geometry was not found.', objOnlyError:'Only OBJ files are supported for now. Choose an OBJ file.', fbxBinaryUnsupported:'Binary FBX is not supported yet. Export ASCII FBX or OBJ from CLO/Marvelous.', fbxArraysNotFound:'Vertices / PolygonVertexIndex arrays were not found in the ASCII FBX.', fbxVerticesInvalid:'The FBX Vertices array count is not divisible by 3.', fileRequired:'Specify an OBJ path or choose an OBJ file.', resetStatus:'Reset. Import an OBJ to begin.', initialStatus:'No model loaded. Import an OBJ to begin.'
   }
@@ -805,7 +835,9 @@ function applyLanguage() {
   if (appSubtitle) appSubtitle.textContent = textFor('subtitle');
   if (isoGuideNote) isoGuideNote.textContent = textFor('isoNote');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = textFor(el.dataset.i18n); });
+  updateTemporaryGuideButton();
   updateModelOpacityLabels();
+  updateTopOutputTargetButtons();
   updateLineTargetTabs();
   updateMeshMeta();
   drawIsoGuide();
@@ -842,6 +874,7 @@ let panPreviewX = 0, panPreviewY = 0;
 let dragDistance = 0;
 let isInteracting = false;
 let heightBar = null;
+let sectionGuidesTemporarilyHidden = false;
 let armMaskCache = null;
 let renderer = null;
 let scene = null;
@@ -2603,6 +2636,8 @@ function resetUiControlsToDefaults() {
   if (compareLayoutInput) compareLayoutInput.value = 'separate';
   if (renderModeInput) renderModeInput.value = 'silhouette';
   if (lineGuideOnlyInput) lineGuideOnlyInput.checked = true;
+  sectionGuidesTemporarilyHidden = false;
+  updateTemporaryGuideButton();
   if (showFloorGridInput) showFloorGridInput.checked = true;
   if (showCenterLinesInput) showCenterLinesInput.checked = true;
   if (maskDrawModeInput) maskDrawModeInput.checked = false;
@@ -4033,18 +4068,20 @@ function drawOverlayOnly() {
   drawAppliedMasks();
   drawModelCenterLines();
   const offsets = displayOffsets();
-  if (primaryVisible) {
-    for (const line of lines) {
-      if (line.preview_visible !== false) drawLinePlane(line, mesh, offsets.primary, 'primary');
+  if (!sectionGuidesTemporarilyHidden) {
+    if (primaryVisible) {
+      for (const line of lines) {
+        if (line.preview_visible !== false) drawLinePlane(line, mesh, offsets.primary, 'primary');
+      }
     }
-  }
-  if (compareMesh && compareVisible) {
-    const compareSet = compareLines.length ? compareLines : cloneLinesForMesh(lines, mesh, compareMesh);
-    for (const line of compareSet) {
-      if (line.preview_visible !== false) drawLinePlane(line, compareMesh, offsets.compare, 'compare');
+    if (compareMesh && compareVisible) {
+      const compareSet = compareLines.length ? compareLines : cloneLinesForMesh(lines, mesh, compareMesh);
+      for (const line of compareSet) {
+        if (line.preview_visible !== false) drawLinePlane(line, compareMesh, offsets.compare, 'compare');
+      }
     }
+    drawHeightBar();
   }
-  drawHeightBar();
   if (!isInteracting) {
     drawIsoGuide();
     drawAxisGizmo();
@@ -4186,7 +4223,25 @@ function projectionQuickLabel() {
   return orthographic ? 'Orthographic' : 'Perspective';
 }
 
+function updateTemporaryGuideButton() {
+  if (!temporaryHideGuidesButton) return;
+  temporaryHideGuidesButton.classList.toggle('active', sectionGuidesTemporarilyHidden);
+  temporaryHideGuidesButton.setAttribute('aria-pressed', sectionGuidesTemporarilyHidden ? 'true' : 'false');
+  temporaryHideGuidesButton.textContent = textFor(sectionGuidesTemporarilyHidden ? 'showGuidesForView' : 'hideGuidesForView');
+}
+
+function updateViewerBgColorControl() {
+  const label = textFor('viewerBgColor');
+  if (viewerBgColorQuickButton) {
+    viewerBgColorQuickButton.title = label;
+    viewerBgColorQuickButton.setAttribute('aria-label', label);
+  }
+  if (viewerBgColorInput) viewerBgColorInput.setAttribute('aria-label', label);
+  if (viewerBgColorSwatch) viewerBgColorSwatch.style.background = viewerBackgroundColor();
+}
 function updateQuickViewControls() {
+  updateTemporaryGuideButton();
+  updateViewerBgColorControl();
   setQuickButtonState(floorGridQuickButton, !showFloorGridInput || showFloorGridInput.checked, textFor('floorGrid'));
   setQuickButtonState(centerLinesQuickButton, !showCenterLinesInput || showCenterLinesInput.checked, textFor('centerLines'));
   setQuickButtonState(projectionQuickButton, !orthographic, projectionQuickLabel());
@@ -4626,6 +4681,11 @@ if (floorGridQuickButton) floorGridQuickButton.addEventListener('click', () => t
 if (centerLinesQuickButton) centerLinesQuickButton.addEventListener('click', () => toggleViewCheckbox(showCenterLinesInput));
 if (projectionQuickButton) projectionQuickButton.addEventListener('click', toggleProjectionMode);
 if (fitViewQuickButton) fitViewQuickButton.addEventListener('click', () => fitViewToModels());
+if (temporaryHideGuidesButton) temporaryHideGuidesButton.addEventListener('click', () => {
+  sectionGuidesTemporarilyHidden = !sectionGuidesTemporarilyHidden;
+  updateTemporaryGuideButton();
+  draw();
+});
 if (showFloorGridInput) showFloorGridInput.addEventListener('change', () => { pushHistory(); geometryDirty = true; updateQuickViewControls(); draw(); });
 if (showCenterLinesInput) showCenterLinesInput.addEventListener('change', () => { pushHistory(); updateQuickViewControls(); draw(); });
 for (const input of [primarySilhouetteColorInput, compareSilhouetteColorInput]) {
@@ -4638,7 +4698,7 @@ if (heightScaleMatchPrimaryButton) heightScaleMatchPrimaryButton.addEventListene
 if (heightScaleMatchCompareButton) heightScaleMatchCompareButton.addEventListener('click', () => { if (setHeightScaleMode('compare')) statusEl.textContent = textFor('heightScaleApplied'); });
 if (heightScaleClearButton) heightScaleClearButton.addEventListener('click', () => { if (setHeightScaleMode('clear')) statusEl.textContent = textFor('heightScaleApplied'); });
 if (viewerBgColorInput) {
-  viewerBgColorInput.addEventListener('input', () => { applyViewerBackground(); requestDraw(); });
+  viewerBgColorInput.addEventListener('input', () => { applyViewerBackground(); updateViewerBgColorControl(); requestDraw(); });
 }
 if (compareLayoutInput) compareLayoutInput.addEventListener('change', () => {
   pushHistory();
@@ -4689,6 +4749,13 @@ for (const button of lineTargetButtons) {
 
 document.getElementById('compareReportButton').onclick = () => generateCompareReport().catch(err => resultStatus.textContent = err.message);
 if (exportSilhouetteButton) exportSilhouetteButton.onclick = exportSilhouettePng;
+for (const button of topOutputTargetButtons) {
+  button.addEventListener('click', () => {
+    if (!topOutputTargetInput) return;
+    topOutputTargetInput.value = button.dataset.topOutputTarget || 'primary';
+    updateTopOutputTargetButtons();
+  });
+}
 document.getElementById('meshFile').addEventListener('change', () => loadModel().catch(err => statusEl.textContent = err.message));
 document.getElementById('compareMeshFile').addEventListener('change', () => loadCompareModel().catch(err => statusEl.textContent = err.message));
 document.getElementById('linesFile').addEventListener('change', () => { pushHistory(); loadLines().then(() => draw()).catch(err => statusEl.textContent = err.message); });
@@ -4754,6 +4821,61 @@ function attachDisplayScaleFields(data) {
   data.set('compare_display_height_cm', compareHeight ? compareHeight.toFixed(4) : '');
 }
 
+function updateTopOutputTargetButtons() {
+  if (!topOutputTargetInput) return;
+  const value = topOutputTargetInput.value || 'primary';
+  for (const button of topOutputTargetButtons) {
+    button.classList.toggle('active', button.dataset.topOutputTarget === value);
+  }
+}
+
+function configureSingleTopOutputData(data, targetName) {
+  if (targetName !== 'compare') {
+    data.set('lines_text', csvFromVisibleLinesOrThrow(lines));
+    data.set('output_stem', fileBaseName('meshFile', 'meshPath', 'main') + '_top');
+    return;
+  }
+  if (!compareMesh) throw new Error(textFor('topCompareNeedsModel'));
+  data.delete('mesh_file');
+  data.delete('mesh_path');
+  data.delete('lines_file');
+  data.delete('lines_path');
+  data.delete('lines_text');
+  const compareFile = document.getElementById('compareMeshFile').files[0];
+  if (compareFile) data.append('mesh_file', compareFile);
+  data.set('mesh_path', document.getElementById('compareMeshPath').value.trim());
+  const sourceLines = compareLines.length ? compareLines : cloneLinesForMesh(lines, mesh, compareMesh);
+  data.set('lines_text', csvFromVisibleLinesOrThrow(sourceLines));
+  const compareHeight = displayHeightForTarget('compare');
+  const compareScale = displayScaleForTarget('compare');
+  data.set('display_height_cm', compareHeight ? compareHeight.toFixed(4) : '');
+  data.set('primary_display_scale', compareScale.toFixed(8));
+  data.set('output_stem', fileBaseName('compareMeshFile', 'compareMeshPath', 'compare') + '_top');
+  data.set('title', fileBaseName('compareMeshFile', 'compareMeshPath', 'compare'));
+}
+
+async function submitBothTopOutput(data) {
+  if (!mesh || !compareMesh) throw new Error(textFor('needBothModels'));
+  data.append('compare_mode', '1');
+  data.append('primary_lines_text', csvFromVisibleLinesOrThrow(lines));
+  data.append('compare_lines_text', csvFromVisibleLinesOrThrow(compareLines.length ? compareLines : cloneLinesForMesh(lines, mesh, compareMesh)));
+  const compareFile = document.getElementById('compareMeshFile').files[0];
+  if (compareFile) data.append('compare_mesh_file', compareFile);
+  data.append('compare_mesh_path', document.getElementById('compareMeshPath').value.trim());
+  data.append('primary_name', fileBaseName('meshFile', 'meshPath', 'main'));
+  data.append('compare_name', fileBaseName('compareMeshFile', 'compareMeshPath', 'compare'));
+  data.set('output_stem', fileBaseName('meshFile', 'meshPath', 'main') + '_vs_' + fileBaseName('compareMeshFile', 'compareMeshPath', 'compare') + '_top');
+  const res = await fetch('/api/generate', {method:'POST', body:data});
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || textFor('generateFailed'));
+  outputImage.src = payload.png_url + '?t=' + Date.now();
+  outputImage.style.display = 'block';
+  outputLinks.innerHTML = `<a href="${payload.png_url}" target="_blank">PNG</a><a href="${payload.json_url}" target="_blank">JSON</a>`;
+  resultTable.innerHTML = '<thead><tr><th>' + textFor('tableLine') + '</th><th>' + textFor('tablePrimary') + '</th><th>' + textFor('tableCompare') + '</th><th>' + textFor('tableDiff') + '</th></tr></thead><tbody>' +
+    payload.sections.map(s => `<tr><td>${s.label || s.name}</td><td>${s.primary_cm.toFixed(2)}</td><td>${s.compare_cm.toFixed(2)}</td><td>${s.diff_cm.toFixed(2)}</td></tr>`).join('') +
+    '</tbody>';
+}
+
 async function generateCompareReport() {
   if (!mesh || !compareMesh) throw new Error(textFor('needBothModels'));
   const button = document.getElementById('compareReportButton');
@@ -4789,19 +4911,24 @@ form.addEventListener('submit', async (event) => {
   const button = document.getElementById('runButton');
   button.disabled = true; resultStatus.textContent = textFor('generating');
   try {
+    const targetName = topOutputTargetInput ? (topOutputTargetInput.value || 'primary') : 'primary';
     const data = new FormData(form);
     attachDisplayScaleFields(data);
-    data.append('lines_text', csvFromVisibleLinesOrThrow());
-    const res = await fetch('/api/generate', {method:'POST', body:data});
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.error || textFor('generateFailed'));
+    if (targetName === 'both') {
+      await submitBothTopOutput(data);
+    } else {
+      configureSingleTopOutputData(data, targetName);
+      const res = await fetch('/api/generate', {method:'POST', body:data});
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || textFor('generateFailed'));
+      outputImage.src = payload.png_url + '?t=' + Date.now();
+      outputImage.style.display = 'block';
+      outputLinks.innerHTML = `<a href="${payload.png_url}" target="_blank">PNG</a><a href="${payload.json_url}" target="_blank">JSON</a>`;
+      resultTable.innerHTML = '<thead><tr><th>' + textFor('tableLine') + '</th><th>' + textFor('tablePerimeter') + '</th><th>' + textFor('tableHeight') + '</th></tr></thead><tbody>' +
+        payload.sections.map(s => `<tr><td>${s.label || s.name}</td><td>${s.perimeter_cm.toFixed(2)}</td><td>${s.height_from_floor_cm.toFixed(2)}</td></tr>`).join('') +
+        '</tbody>';
+    }
     resultStatus.textContent = textFor('done');
-    outputImage.src = payload.png_url + '?t=' + Date.now();
-    outputImage.style.display = 'block';
-    outputLinks.innerHTML = `<a href="${payload.png_url}" target="_blank">PNG</a><a href="${payload.json_url}" target="_blank">JSON</a>`;
-    resultTable.innerHTML = '<thead><tr><th>' + textFor('tableLine') + '</th><th>' + textFor('tablePerimeter') + '</th><th>' + textFor('tableHeight') + '</th></tr></thead><tbody>' +
-      payload.sections.map(s => `<tr><td>${s.label || s.name}</td><td>${s.perimeter_cm.toFixed(2)}</td><td>${s.height_from_floor_cm.toFixed(2)}</td></tr>`).join('') +
-      '</tbody>';
   } catch (err) {
     resultStatus.textContent = err.message;
   } finally {
