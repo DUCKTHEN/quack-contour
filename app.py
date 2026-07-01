@@ -512,6 +512,13 @@ def html_page() -> bytes:
             <label class="option-toggle chip-toggle"><input type="checkbox" id="maskDrawMode"><span data-i18n="makeMask">マスク作成</span></label>
             <label class="option-toggle chip-toggle"><input type="checkbox" id="showMaskRects" checked><span data-i18n="showMaskRects">&#12510;&#12473;&#12463;&#26528;&#12434;&#34920;&#31034;</span></label>
           </div>
+          <div class="option-select mask-shape-select">
+            <label data-i18n="maskShape">&#12510;&#12473;&#12463;&#24418;&#29366;</label>
+            <select id="maskShapeMode">
+              <option value="rect" selected data-i18n="maskRect">&#30697;&#24418;</option>
+              <option value="lasso" data-i18n="maskLasso">&#25237;&#12370;&#12394;&#12431;</option>
+            </select>
+          </div>
           <button type="button" id="clearMasksButton" class="secondary compact-button mask-clear" data-i18n="clearMasks">マスク削除</button>
         </div>
         <div class="control-group">
@@ -628,6 +635,7 @@ const outputLinks = document.getElementById('outputLinks');
 const resultTable = document.getElementById('resultTable');
 const hideArmsInput = document.getElementById('hideArms') || { checked:false, addEventListener(){} };
 const maskDrawModeInput = document.getElementById('maskDrawMode');
+const maskShapeModeInput = document.getElementById('maskShapeMode');
 const clearMasksButton = document.getElementById('clearMasksButton');
 const showMaskRectsInput = document.getElementById('showMaskRects');
 const lineGuideOnlyInput = document.getElementById('lineGuideOnly');
@@ -669,7 +677,7 @@ const UI_TEXT = {
     toggle:'English', subtitle:'OBJ体型断面ツール', generate:'生成', displayModels:'表示モデル', viewControls:'ビュー操作',
     fitView:'表示を合わせる', makeTopView:'上面図生成', makeCompare:'比較図生成', exportSilhouette:'シルエットPNG',
     underlayImage:'画像', moveUnderlay:'下絵を動かす', deleteUnderlay:'下絵削除', underlayLoaded:'下絵を読み込みました。', underlayDeleted:'下絵を削除しました。', underlayMoveHint:'下絵移動中: 左ドラッグで移動、黄色い角ハンドル/ホイールで拡大縮小、上の丸ハンドルで回転。', underlayNoImage:'先に下絵画像を読み込んでください。', importPrimary:'主 OBJインポート', importCompare:'比較 OBJインポート',
-    showPrimary:'主モデルを表示', showCompare:'比較モデルを表示', delete:'削除', primaryColor:'主モデル色', compareColor:'比較色', primaryOpacity:'主モデル濃さ', compareOpacity:'比較濃さ', viewerBgColor:'背景色', compareLayout:'比較配置', sideBySide:'並べる', overlay:'重ねる', makeMask:'マスク作成', clearMasks:'マスク削除', showMaskRects:'マスク枠を表示', lineOnly:'断面ガイドを線だけ表示', hideAllGuides:'断面ガイドを一括非表示', showAllGuides:'断面ガイドを一括表示', floorGrid:'床グリッドを表示', centerLines:'中心線を表示', maskTools:'マスク', displayAids:'表示補助', rotationAssist:'回転補助', helpSummary:'操作メモ', renderMode:'表示モード', silhouetteMode:'シルエット表示', outlineMode:'外周線表示', yaw:'水平回転', invertPitch:'上下回転を反転', invertYaw:'左右回転を反転',
+    showPrimary:'主モデルを表示', showCompare:'比較モデルを表示', delete:'削除', primaryColor:'主モデル色', compareColor:'比較色', primaryOpacity:'主モデル濃さ', compareOpacity:'比較濃さ', viewerBgColor:'背景色', compareLayout:'比較配置', sideBySide:'並べる', overlay:'重ねる', makeMask:'マスク作成', maskShape:'\u30de\u30b9\u30af\u5f62\u72b6', maskRect:'\u77e9\u5f62', maskLasso:'\u6295\u3052\u306a\u308f', clearMasks:'マスク削除', showMaskRects:'マスク枠を表示', lineOnly:'断面ガイドを線だけ表示', hideAllGuides:'断面ガイドを一括非表示', showAllGuides:'断面ガイドを一括表示', floorGrid:'床グリッドを表示', centerLines:'中心線を表示', maskTools:'マスク', displayAids:'表示補助', rotationAssist:'回転補助', helpSummary:'操作メモ', renderMode:'表示モード', silhouetteMode:'シルエット表示', outlineMode:'外周線表示', yaw:'水平回転', invertPitch:'上下回転を反転', invertYaw:'左右回転を反転',
     primaryModel:'主モデル', compareModel:'比較モデル', show:'表示', lineName:'断面名', perimeterLabel:'周囲計', moveHandle:'動かす', lineEmpty:'モデルを読み込むと断面位置を編集できます。', noModel:'モデルを読み込んでください',
     isoDefaultTitle:'', isoDefaultText:'先に主モデルを読み込んでください。', isoNote:'OBJを読み込むと、次の操作をここに表示します。', selectedPrefix:'編集中: ', genericLine:'断面ライン', genericGuide:'断面位置を調整し、必要なら比較モデルや下絵を追加できます。',
     meshVertices:'頂点', meshFaces:'総三角面', meshShown:'プレビュー表示', meshDecimated:'間引き', meshSilhouette:'シルエット', meshFormat:'形式', meshHeight:'身長', screenError:'画面エラー: ', processError:'処理エラー: ', modelLoading:'モデル読み込み中', modelLinesLoading:'モデル読み込み完了。ライン読み込み中', loadComplete:'読み込み完了', loadCompleteCompare:'読み込み完了。比較表示中', modelLoadedLineError:'モデルは読み込み完了。ライン定義: ', mainFirst:'先に主モデルを読み込んでください', compareLoading:'比較モデル読み込み中', compareLoaded:'比較モデル読み込み完了。比較モデルの断面位置を編集中です。', deleteCompareStatus:'比較モデルを削除しました。', deletePrimaryStatus:'主モデルを削除しました。', duckMuted:'今は音を鳴らせませんでした。', masksCleared:'マスクを削除しました。',
@@ -678,7 +686,7 @@ const UI_TEXT = {
   en: {
     toggle:'日本語', subtitle:'OBJ body section tool', generate:'Output', displayModels:'Models', viewControls:'View controls', fitView:'Fit view', makeTopView:'Top view', makeCompare:'Compare report', exportSilhouette:'Silhouette PNG',
     underlayImage:'Image', moveUnderlay:'Move underlay', deleteUnderlay:'Delete underlay', underlayLoaded:'Underlay image loaded.', underlayDeleted:'Underlay image deleted.', underlayMoveHint:'Underlay move mode: left drag to move; drag yellow corners or wheel to scale; drag the top round handle to rotate.', underlayNoImage:'Import an underlay image first.', importPrimary:'Primary OBJ', importCompare:'Compare OBJ',
-    showPrimary:'Show primary', showCompare:'Show compare', delete:'Delete', primaryColor:'Primary color', compareColor:'Compare color', primaryOpacity:'Primary opacity', compareOpacity:'Compare opacity', viewerBgColor:'Background color', compareLayout:'Compare layout', sideBySide:'Side by side', overlay:'Overlay', makeMask:'Draw mask', clearMasks:'Clear masks', showMaskRects:'Show mask boxes', lineOnly:'Guide lines only', hideAllGuides:'Hide all section guides', showAllGuides:'Show all section guides', floorGrid:'Show floor grid', centerLines:'Show center lines', maskTools:'Mask', displayAids:'Display aids', rotationAssist:'Rotation assist', helpSummary:'Operation notes', renderMode:'View mode', silhouetteMode:'Silhouette', outlineMode:'Outline', yaw:'Horizontal rotation', invertPitch:'Invert up/down rotation', invertYaw:'Invert left/right rotation', primaryModel:'Primary model', compareModel:'Compare model', show:'Show', lineName:'Section name', perimeterLabel:'Perimeter', moveHandle:'Move', lineEmpty:'Load a model to edit section positions.', noModel:'Load a model',
+    showPrimary:'Show primary', showCompare:'Show compare', delete:'Delete', primaryColor:'Primary color', compareColor:'Compare color', primaryOpacity:'Primary opacity', compareOpacity:'Compare opacity', viewerBgColor:'Background color', compareLayout:'Compare layout', sideBySide:'Side by side', overlay:'Overlay', makeMask:'Draw mask', maskShape:'Mask shape', maskRect:'Rectangle', maskLasso:'Lasso', clearMasks:'Clear masks', showMaskRects:'Show mask boxes', lineOnly:'Guide lines only', hideAllGuides:'Hide all section guides', showAllGuides:'Show all section guides', floorGrid:'Show floor grid', centerLines:'Show center lines', maskTools:'Mask', displayAids:'Display aids', rotationAssist:'Rotation assist', helpSummary:'Operation notes', renderMode:'View mode', silhouetteMode:'Silhouette', outlineMode:'Outline', yaw:'Horizontal rotation', invertPitch:'Invert up/down rotation', invertYaw:'Invert left/right rotation', primaryModel:'Primary model', compareModel:'Compare model', show:'Show', lineName:'Section name', perimeterLabel:'Perimeter', moveHandle:'Move', lineEmpty:'Load a model to edit section positions.', noModel:'Load a model',
     isoDefaultTitle:'', isoDefaultText:'Import the primary OBJ first.', isoNote:'Next steps appear here as you work.', selectedPrefix:'Editing: ', genericLine:'Section line', genericGuide:'Adjust section positions, then add a compare model or underlay if needed.', meshVertices:'vertices', meshFaces:'total triangles', meshShown:'preview', meshDecimated:'decimated', meshSilhouette:'silhouette', meshFormat:'format', meshHeight:'height', screenError:'Screen error: ', processError:'Process error: ', modelLoading:'Loading model', modelLinesLoading:'Model loaded. Loading section lines', loadComplete:'Loaded', loadCompleteCompare:'Loaded. Showing two-model comparison', modelLoadedLineError:'Model loaded. Line definition: ', mainFirst:'Load a primary model first', compareLoading:'Loading compare model', compareLoaded:'Compare model loaded. Editing compare-model section positions', deleteCompareStatus:'Compare model deleted', deletePrimaryStatus:'Primary model deleted', duckMuted:'The duck could not quack right now.', masksCleared:'Masks cleared',
     maskCreated:'Masked selected mesh faces', needBothModels:'Load both primary and compare models', helpText:'Left drag to rotate. Use horizontal rotation to inspect front, back, and sides. When Draw mask is on, left drag creates a rectangular or lasso mask. Drag the colored dots on the side height bars to move section positions vertically. Middle mouse, right drag, or Shift+left drag pans. Mouse wheel zooms. Fit view frames the current view. View keys follow CLO/Marvelous style: 2 front, 8 back, 4/6 sides, 5 top. Press P to switch orthographic/perspective.', exportNoModel:'Load a model before exporting.', pngExportFailed:'PNG export failed.', silhouettePngLink:'PNG', silhouetteExported:'Silhouette PNG is ready.', compareGenerating:'Generating compare report', compareFailed:'Compare report failed.', compareComplete:'Compare report complete', tableLine:'Line', tablePrimary:'Primary cm', tableCompare:'Compare cm', tableDiff:'Diff cm', generating:'Generating', generateFailed:'Generation failed', done:'Done', tablePerimeter:'Perimeter cm', tableHeight:'Height cm', renderError:'3D display error: ', meshNotFound:'Mesh geometry was not found.', objOnlyError:'Only OBJ files are supported for now. Choose an OBJ file.', fbxBinaryUnsupported:'Binary FBX is not supported yet. Export ASCII FBX or OBJ from CLO/Marvelous.', fbxArraysNotFound:'Vertices / PolygonVertexIndex arrays were not found in the ASCII FBX.', fbxVerticesInvalid:'The FBX Vertices array count is not divisible by 3.', fileRequired:'Specify an OBJ path or choose an OBJ file.', resetStatus:'Reset. Import an OBJ to begin.', initialStatus:'No model loaded. Import an OBJ to begin.'
   }
@@ -767,6 +775,13 @@ let redoStack = [];
 let pendingHistorySnapshot = null;
 let underlayWheelHistoryTimer = null;
 const UNDERLAY_GIZMO_HANDLE_SIZE = 14;
+
+function clearPanPreviewTransform() {
+  panPreviewX = 0;
+  panPreviewY = 0;
+  if (canvas) canvas.style.transform = '';
+  if (glCanvas) glCanvas.style.transform = '';
+}
 
 const PANEL_WIDTH_DEFAULTS = {left: 280, right: 320};
 const PANEL_WIDTH_LIMITS = {left: {min: 240, max: 460}, right: {min: 300, max: 600}};
@@ -1130,6 +1145,7 @@ function snapshotContour() {
       showFloorGrid: showFloorGridInput ? showFloorGridInput.checked : true,
       showCenterLines: showCenterLinesInput ? showCenterLinesInput.checked : true,
       maskDrawMode: maskDrawModeInput ? maskDrawModeInput.checked : false,
+      maskShapeMode: maskShapeModeInput ? maskShapeModeInput.value : 'rect',
       pickSectionHeight: pickSectionHeightInput ? pickSectionHeightInput.checked : false,
       invertPitch: invertPitchInput ? invertPitchInput.checked : false,
       invertYaw: invertYawInput ? invertYawInput.checked : false,
@@ -1173,6 +1189,7 @@ function restoreContour(snapshot) {
   if (showFloorGridInput) showFloorGridInput.checked = controls.showFloorGrid !== false;
   if (showCenterLinesInput) showCenterLinesInput.checked = controls.showCenterLines !== false;
   if (maskDrawModeInput) maskDrawModeInput.checked = !!controls.maskDrawMode;
+  if (maskShapeModeInput) maskShapeModeInput.value = controls.maskShapeMode || 'rect';
   if (pickSectionHeightInput) pickSectionHeightInput.checked = !!controls.pickSectionHeight;
   if (invertPitchInput) invertPitchInput.checked = !!controls.invertPitch;
   if (invertYawInput) invertYawInput.checked = !!controls.invertYaw;
@@ -1460,6 +1477,12 @@ function csvFromLines(sourceLines = lines, options = {}) {
   const rows = [header.join(',')];
   for (const l of exportLines) {
     const row = {...l, scan: 'false'};
+    const expected = parseFloat(row.expected_cm || '');
+    if (!Number.isFinite(expected)) {
+      row.expected_cm = '';
+      row.select = row.select === 'closest' ? 'largest' : (row.select || 'largest');
+      row.scan = 'false';
+    }
     rows.push(header.map(h => csvEscape(row[h] ?? '')).join(','));
   }
   return rows.join(String.fromCharCode(10));
@@ -1488,6 +1511,10 @@ function normalizeLines(rows, targetMesh = mesh) {
     if (!out.scan_around_cm) out.scan_around_cm = '4.0';
     if (!out.select) out.select = out.expected_cm ? 'closest' : 'largest';
     if (!out.scan) out.scan = out.expected_cm ? 'true' : 'false';
+    if (out.select === 'closest' && !Number.isFinite(parseFloat(out.expected_cm || ''))) {
+      out.select = 'largest';
+      out.scan = 'false';
+    }
     return out;
   });
 }
@@ -2326,6 +2353,7 @@ function resetUiControlsToDefaults() {
   if (showFloorGridInput) showFloorGridInput.checked = true;
   if (showCenterLinesInput) showCenterLinesInput.checked = true;
   if (maskDrawModeInput) maskDrawModeInput.checked = false;
+  if (maskShapeModeInput) maskShapeModeInput.value = 'rect';
   if (pickSectionHeightInput) pickSectionHeightInput.checked = false;
   if (hideArmsInput) hideArmsInput.checked = false;
   if (invertPitchInput) invertPitchInput.checked = false;
@@ -3030,12 +3058,15 @@ function pointInPolygon(point, polygon) {
   return inside;
 }
 
+function currentMaskShapeMode() {
+  return maskShapeModeInput && maskShapeModeInput.value === 'lasso' ? 'lasso' : 'rect';
+}
+
 function maskShapeFromDraft(draft) {
   const rect = rectFromPoints(draft.x0, draft.y0, draft.x1, draft.y1);
+  if (currentMaskShapeMode() !== 'lasso') return {type:'rect', rect};
   const points = draft.points || [];
-  const area = Math.abs(polygonArea(points));
-  const lasso = points.length >= 6 && rect.w > 6 && rect.h > 6 && area > 80 && maxDraftDeviation(points) > 9;
-  return lasso ? {type:'lasso', points, rect:boundsForPoints(points)} : {type:'rect', rect};
+  return {type:'lasso', points, rect:points.length ? boundsForPoints(points) : rect};
 }
 
 function targetMeshByName(targetName) {
@@ -3768,6 +3799,10 @@ function drawOverlayOnly() {
   drawUnderlayScaleGizmo();
 }
 
+function drawOverlaysFromBase() {
+  drawOverlayOnly();
+}
+
 function doodleTitle(key) {
   const titles = {
     ja: {pen:'落書きペン', circle:'落書き円', clear:'落書き削除'},
@@ -4288,14 +4323,23 @@ maskDrawModeInput.addEventListener('change', () => {
   updateViewerCursor();
   draw();
 });
+if (maskShapeModeInput) maskShapeModeInput.addEventListener('change', () => {
+  pushHistory();
+  maskDraft = null;
+  updateViewerCursor();
+  draw();
+});
 if (showMaskRectsInput) showMaskRectsInput.addEventListener('change', () => { pushHistory(); draw(); });
 clearMasksButton.addEventListener('click', () => {
-  if (screenMasks.length) pushHistory();
+  const hadMasks = screenMasks.length > 0;
+  const hadDoodles = doodleShapes.length > 0 || !!doodleDraft;
+  if (hadMasks || hadDoodles || maskDraft) pushHistory();
   screenMasks = [];
   doodleShapes = [];
   doodleDraft = null;
   setDoodleMode('none');
   maskDraft = null;
+  if (hadMasks) geometryDirty = true;
   resultStatus.textContent = textFor('masksCleared');
   draw();
 });
@@ -4517,6 +4561,13 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(data)
             return
+        if parsed.path == "/shared":
+            self.send_response(302)
+            self.send_header("Location", "/shared/")
+            self.end_headers()
+            return
+        if parsed.path == "/shared/" or parsed.path.startswith("/shared/"):
+            return self.serve_shared_file(parsed.path)
         if parsed.path in {"/asset/IconAhiru.png", "/favicon.ico"}:
             return self.serve_file(DEFAULT_LOGO)
         if parsed.path == "/asset/duck-quacking-37392.mp3":
@@ -4525,6 +4576,18 @@ class Handler(BaseHTTPRequestHandler):
             return self.serve_file(VENDOR / "three.min.js")
         if parsed.path.startswith("/outputs/"):
             return self.serve_file(WEB_OUTPUTS / unquote(parsed.path.removeprefix("/outputs/")))
+        if parsed.path == "/api/health":
+            json_response(self, {
+                "ok": True,
+                "backend": "python",
+                "features": {
+                    "meshPreview": True,
+                    "lineTemplates": True,
+                    "topViewGeneration": True,
+                    "compareGeneration": True,
+                },
+            })
+            return
         if parsed.path == "/api/mesh":
             try:
                 params = parse_qs(parsed.query)
@@ -4546,6 +4609,25 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, {"error": str(exc)}, 500)
             return
         json_response(self, {"error": "not found"}, 404)
+
+    def serve_shared_file(self, request_path: str) -> None:
+        relative = unquote(request_path.removeprefix("/shared/"))
+        if not relative:
+            relative = "index.html"
+        normalized = Path(relative)
+        allowed_roots = {"index.html", "web", "assets", "vendor"}
+        if normalized.parts and normalized.parts[0] not in allowed_roots:
+            json_response(self, {"error": "not found"}, 404)
+            return
+        path = (ROOT / normalized).resolve()
+        try:
+            path.relative_to(ROOT)
+        except ValueError:
+            json_response(self, {"error": "not found"}, 404)
+            return
+        if path.is_dir():
+            path = path / "index.html"
+        return self.serve_file(path)
 
     def do_POST(self) -> None:
         if urlparse(self.path).path != "/api/generate":

@@ -366,9 +366,14 @@ def build_sections(vertices, faces, config: dict[str, Any]) -> tuple[list[dict[s
         expected = section.get("expected_cm")
         if expected is not None:
             section["expected_cm"] = float(expected)
+        else:
+            section.pop("expected_cm", None)
         select = section.get("select")
         if select is None:
             section["select"] = "closest" if expected is not None else "largest"
+        elif select == "closest" and expected is None:
+            section["select"] = "largest"
+            section["scan"] = False
         base_height = height_from_section(section, floor, body_height)
         height, selected, paths, scan_best = scan_for_section(vertices, faces, base_height, section, eps, join_tolerance)
         summary = summarize_loop(selected)
