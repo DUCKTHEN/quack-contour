@@ -157,6 +157,8 @@ The MIT License is intended to make the tool easy to use in personal, studio, co
 
 Assets, sample files, generated images, and imported user model data are not automatically covered by the MIT code license unless explicitly stated.
 
+The duck sound effect is a third-party asset from Pixabay and is documented separately in `assets/sounds/README.md`. Do not redistribute or sell the sound as a standalone asset.
+
 ---
 
 # Quack Contour 日本語説明
@@ -211,3 +213,5 @@ Quack Contour では、主モデルと比較モデルを表示上だけ同じ身
 コードは MIT License です。
 
 個人制作、スタジオ制作、商用利用、ゲーム制作の現場でも使いやすい形を意識しています。ただし、サンプル素材、生成画像、ユーザーが読み込むモデルデータは、明示されていない限りMITライセンスの対象ではありません。
+
+アヒルの効果音は Pixabay 由来の第三者素材で、詳細は `assets/sounds/README.md` に記録しています。音声素材単体として再配布・販売しないでください。
