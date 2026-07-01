@@ -351,6 +351,12 @@ def html_page() -> bytes:
     .height-scale-mode-row { display:grid; grid-template-columns:1fr 1fr 52px; gap:5px; }
     .height-scale-mode-row button { height:30px; min-height:30px; padding:0 6px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .height-scale-mode-row button.active { background:rgba(244,191,36,.18); border-color:rgba(244,191,36,.75); color:var(--accent); }
+    .scale-correction-box { display:grid; gap:5px; padding-top:6px; border-top:1px solid #252d38; }
+    .scale-correction-title { color:var(--muted); font-size:11px; font-weight:800; }
+    .scale-correction-row { display:grid; grid-template-columns:54px minmax(0,1fr) 42px 34px; align-items:center; gap:5px; }
+    .scale-correction-label { color:var(--muted); font-size:10px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .scale-correction-row input { height:28px; padding:0 6px; font-size:11px; }
+    .scale-correction-row button { height:28px; min-height:28px; padding:0 5px; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .height-scale-note { min-height:14px; color:var(--muted); font-size:10px; line-height:1.35; }
     .model-opacity-control { display:grid; grid-template-columns:minmax(76px,.9fr) minmax(82px,1fr) 38px; align-items:center; gap:7px; margin:0; color:var(--muted); font-size:11px; font-weight:800; }
     .model-opacity-control input[type=range] { height:18px; min-width:0; padding:0; accent-color:var(--accent); }
@@ -576,6 +582,21 @@ def html_page() -> bytes:
               <button type="button" id="heightScaleMatchCompare" class="secondary" data-i18n="heightScaleMatchCompare">&#27604;&#36611;&#12395;&#21512;&#12431;&#12379;&#12427;</button>
               <button type="button" id="heightScaleClear" class="secondary" data-i18n="heightScaleClear">&#35299;&#38500;</button>
             </div>
+            <div class="scale-correction-box">
+              <div class="scale-correction-title" data-i18n="scaleCorrectionTitle">Scale correction</div>
+              <div class="scale-correction-row">
+                <span class="scale-correction-label" data-i18n="scaleCorrectionPrimary">Primary cm</span>
+                <input id="primaryScaleTarget" type="number" min="1" step="0.1" inputmode="decimal">
+                <button type="button" id="primaryScaleApply" class="secondary" data-i18n="scaleCorrectionApply">Apply</button>
+                <button type="button" id="primaryScaleReset" class="secondary" data-i18n="scaleCorrectionReset">1x</button>
+              </div>
+              <div class="scale-correction-row">
+                <span class="scale-correction-label" data-i18n="scaleCorrectionCompare">Compare cm</span>
+                <input id="compareScaleTarget" type="number" min="1" step="0.1" inputmode="decimal">
+                <button type="button" id="compareScaleApply" class="secondary" data-i18n="scaleCorrectionApply">Apply</button>
+                <button type="button" id="compareScaleReset" class="secondary" data-i18n="scaleCorrectionReset">1x</button>
+              </div>
+            </div>
             <div class="height-scale-note" id="heightScaleNote"></div>
           </div>
           <div class="option-select" style="margin-top:4px;">
@@ -771,6 +792,12 @@ const heightScaleMatchPrimaryButton = document.getElementById('heightScaleMatchP
 const heightScaleMatchCompareButton = document.getElementById('heightScaleMatchCompare');
 const heightScaleClearButton = document.getElementById('heightScaleClear');
 const heightScaleNote = document.getElementById('heightScaleNote');
+const primaryScaleTargetInput = document.getElementById('primaryScaleTarget');
+const compareScaleTargetInput = document.getElementById('compareScaleTarget');
+const primaryScaleApplyButton = document.getElementById('primaryScaleApply');
+const compareScaleApplyButton = document.getElementById('compareScaleApply');
+const primaryScaleResetButton = document.getElementById('primaryScaleReset');
+const compareScaleResetButton = document.getElementById('compareScaleReset');
 const viewerBgColorInput = document.getElementById('viewerBgColor');
 const viewerBgColorSwatch = document.getElementById('viewerBgColorSwatch');
 const viewerBgColorQuickButton = document.getElementById('viewerBgColorQuickButton');
@@ -808,7 +835,15 @@ Object.assign(UI_TEXT.ja, {
   heightScaleViewOnly:'\u8868\u793a\u3068\u65ad\u9762\u56f3\u306e\u5bf8\u6cd5\u306b\u53cd\u6620\u3057\u307e\u3059\u3002\u5143OBJ\u306f\u5909\u66f4\u3057\u307e\u305b\u3093\u3002',
   heightScaleNoModel:'OBJ\u3092\u8aad\u307f\u8fbc\u3080\u3068\u8eab\u9577\u5408\u308f\u305b\u3092\u4f7f\u3048\u307e\u3059\u3002',
   heightScaleNeedBoth:'\u4e3b\u30fb\u6bd4\u8f03\u306e\u4e21\u65b9\u3092\u8aad\u307f\u8fbc\u3080\u3068\u4f7f\u3048\u307e\u3059\u3002',
-  heightScaleApplied:'\u8868\u793a\u8eab\u9577\u5408\u308f\u305b\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002'
+  heightScaleApplied:'\u8868\u793a\u8eab\u9577\u5408\u308f\u305b\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002',
+  scaleCorrectionTitle:'\u30b9\u30b1\u30fc\u30eb\u88dc\u6b63',
+  scaleCorrectionPrimary:'\u4e3b\u76ee\u6a19cm',
+  scaleCorrectionCompare:'\u6bd4\u8f03\u76ee\u6a19cm',
+  scaleCorrectionApply:'\u9069\u7528',
+  scaleCorrectionReset:'1x',
+  scaleCorrectionInvalid:'\u76ee\u6a19\u8eab\u9577\u3092cm\u3067\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+  scaleCorrectionApplied:'\u8868\u793a\u30b9\u30b1\u30fc\u30eb\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002',
+  scaleCorrectionNote:'2cm\u2192200cm\u306a\u3069\u3001OBJ\u306e\u5358\u4f4d\u304c\u9055\u3046\u6642\u306b\u8868\u793a\u5bf8\u6cd5\u3092\u88dc\u6b63\u3057\u307e\u3059\u3002\u5143OBJ\u306f\u5909\u66f4\u3057\u307e\u305b\u3093\u3002'
 });
 Object.assign(UI_TEXT.en, {
   heightScaleTitle:'Display height match',
@@ -818,7 +853,15 @@ Object.assign(UI_TEXT.en, {
   heightScaleViewOnly:'Applies to display and section output dimensions. Source OBJ files are not changed.',
   heightScaleNoModel:'Load an OBJ to use height matching.',
   heightScaleNeedBoth:'Load both primary and compare models to use height matching.',
-  heightScaleApplied:'Display height matching updated.'
+  heightScaleApplied:'Display height matching updated.',
+  scaleCorrectionTitle:'Scale correction',
+  scaleCorrectionPrimary:'Primary cm',
+  scaleCorrectionCompare:'Compare cm',
+  scaleCorrectionApply:'Apply',
+  scaleCorrectionReset:'1x',
+  scaleCorrectionInvalid:'Enter a target height in cm.',
+  scaleCorrectionApplied:'Display scale updated.',
+  scaleCorrectionNote:'Use this when OBJ units differ, such as 2 cm -> 200 cm. Source OBJ files are not changed.'
 });
 let currentLanguage = localStorage.getItem('quackContourLanguage') || 'ja';
 function textFor(key) { return (UI_TEXT[currentLanguage] && UI_TEXT[currentLanguage][key]) || UI_TEXT.ja[key] || key; }
@@ -1217,6 +1260,47 @@ function loadUnderlayFile(file) {
 
 function clonePlain(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function boundsFromVertices(vertices) {
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (const v of vertices) {
+    const x = Number(v[0]);
+    const y = Number(v[1]);
+    const z = Number(v[2]);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (z < minZ) minZ = z;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+    if (z > maxZ) maxZ = z;
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(minZ)) throw new Error(textFor('meshNotFound'));
+  return {min:[minX, minY, minZ], max:[maxX, maxY, maxZ]};
+}
+
+function boundsFromPointPairs(points) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const point of points) {
+    const x = Number(point[0]);
+    const y = Number(point[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return Number.isFinite(minX) ? [minX, minY, maxX, maxY] : [0, 0, 0, 0];
+}
+
+function maxValue(values, fallback = 0) {
+  let max = -Infinity;
+  for (const value of values) {
+    if (Number.isFinite(value) && value > max) max = value;
+  }
+  return Number.isFinite(max) ? max : fallback;
 }
 
 function snapshotUnderlay() {
@@ -1710,7 +1794,7 @@ function applyDisplayScaleState(options = {}) {
 function setDisplayScaleForTarget(targetName, scale, options = {}) {
   const targetMesh = meshForLineTarget(targetName);
   if (!targetMesh) return false;
-  const next = Math.max(0.05, Math.min(8, Number.isFinite(scale) ? scale : 1));
+  const next = Math.max(0.001, Math.min(1000, Number.isFinite(scale) ? scale : 1));
   if (options.push !== false) pushHistory();
   if (targetName === 'compare') compareDisplayScale = next;
   else primaryDisplayScale = next;
@@ -1800,7 +1884,61 @@ function projectPointForTarget(v, targetMesh, targetName, offset = zeroOffset())
   return projectPoint(scaledPointForTarget(targetMesh, targetName, v, offset));
 }
 
+function formatHeightInputValue(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const fixed = n >= 100 ? n.toFixed(1) : n.toFixed(2);
+  return fixed.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+}
+
+function scaleTargetInput(targetName) {
+  return targetName === 'compare' ? compareScaleTargetInput : primaryScaleTargetInput;
+}
+
+function scaleCorrectionButtons(targetName) {
+  return targetName === 'compare'
+    ? [compareScaleApplyButton, compareScaleResetButton]
+    : [primaryScaleApplyButton, primaryScaleResetButton];
+}
+
+function updateScaleCorrectionControls() {
+  for (const targetName of ['primary', 'compare']) {
+    const targetMesh = meshForLineTarget(targetName);
+    const input = scaleTargetInput(targetName);
+    const buttons = scaleCorrectionButtons(targetName);
+    if (input) {
+      input.disabled = !targetMesh;
+      input.placeholder = targetMesh ? formatHeightInputValue(targetMesh.height_cm) : '--';
+      if (document.activeElement !== input) input.value = targetMesh ? formatHeightInputValue(displayHeightForTarget(targetName)) : '';
+    }
+    for (const button of buttons) {
+      if (button) button.disabled = !targetMesh;
+    }
+  }
+}
+
+function applyTargetDisplayHeight(targetName) {
+  const targetMesh = meshForLineTarget(targetName);
+  const input = scaleTargetInput(targetName);
+  if (!targetMesh || !input) return false;
+  const targetHeight = parseFloat(input.value);
+  if (!Number.isFinite(targetHeight) || targetHeight <= 0 || !Number.isFinite(targetMesh.height_cm) || targetMesh.height_cm <= 0) {
+    statusEl.textContent = textFor('scaleCorrectionInvalid');
+    return false;
+  }
+  const ok = setDisplayScaleForTarget(targetName, targetHeight / targetMesh.height_cm);
+  if (ok) statusEl.textContent = textFor('scaleCorrectionApplied');
+  return ok;
+}
+
+function resetTargetDisplayScale(targetName) {
+  const ok = setDisplayScaleForTarget(targetName, 1);
+  if (ok) statusEl.textContent = textFor('scaleCorrectionApplied');
+  return ok;
+}
+
 function updateHeightScaleControls() {
+  updateScaleCorrectionControls();
   const hasPrimary = !!mesh;
   const hasCompare = !!compareMesh;
   const mode = currentHeightScaleMode();
@@ -1818,7 +1956,7 @@ function updateHeightScaleControls() {
   if (!hasPrimary && !hasCompare) {
     heightScaleNote.textContent = textFor('heightScaleNoModel');
   } else if (!(hasPrimary && hasCompare)) {
-    heightScaleNote.textContent = textFor('heightScaleNeedBoth');
+    heightScaleNote.textContent = textFor('scaleCorrectionNote');
   } else {
     heightScaleNote.textContent = textFor('heightScaleViewOnly');
   }
@@ -1992,14 +2130,18 @@ function buildSectionPaths(segments, tolerance = 1e-4) {
     let perimeter = 0;
     for (let i = 0; i < coords.length - 1; i++) perimeter += distance2d(coords[i], coords[i + 1]);
     if (closed && coords.length > 2) perimeter += distance2d(coords[0], coords[coords.length - 1]);
-    const xs = coords.map(p => p[0]);
-    const zs = coords.map(p => p[1]);
+    let sumX = 0;
+    let sumZ = 0;
+    for (const point of coords) {
+      sumX += point[0];
+      sumZ += point[1];
+    }
     paths.push({
       perimeter,
       closed,
       point_count: coords.length,
-      centroid: [xs.reduce((sum, v) => sum + v, 0) / coords.length, zs.reduce((sum, v) => sum + v, 0) / coords.length],
-      bbox: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)]
+      centroid: [sumX / coords.length, sumZ / coords.length],
+      bbox: boundsFromPointPairs(coords)
     });
   }
   return paths.sort((a, b) => b.perimeter - a.perimeter);
@@ -2205,7 +2347,7 @@ function estimateTorsoHalfWidth(targetMesh = mesh, targetLines = lines) {
     lineHeightByKeywords(['hip', '\u30d2\u30c3\u30d7'], targetMesh.height_cm * 0.50, targetLines),
   ];
   const halfWidths = sampleHeights.map(h => centralHalfWidthAtHeight(targetMesh, h)).filter(v => v > 0);
-  return Math.max(...halfWidths, (b.max[0] - b.min[0]) * 0.12);
+  return Math.max(maxValue(halfWidths, 0), (b.max[0] - b.min[0]) * 0.12);
 }
 
 function armCutLimitAtHeight(targetMesh, height, shoulderH, waistH, hipH) {
@@ -2300,10 +2442,10 @@ function triangulateClient(indices) {
 
 function meshPayloadFromGeometry(vertices, faces, loader) {
   if (!vertices.length || !faces.length) throw new Error(textFor('meshNotFound'));
-  const xs = vertices.map(v=>v[0]), ys = vertices.map(v=>v[1]), zs = vertices.map(v=>v[2]);
+  const bounds = boundsFromVertices(vertices);
   const maxPreviewFaces = 2500;
   const stride = Math.max(1, Math.ceil(faces.length / maxPreviewFaces));
-  return {vertices, faces: faces.filter((_,i)=>i%stride===0), silhouette_faces: faces, source_face_count: faces.length, face_stride: stride, loader, bounds:{min:[Math.min(...xs),Math.min(...ys),Math.min(...zs)], max:[Math.max(...xs),Math.max(...ys),Math.max(...zs)]}, height_cm: Math.max(...ys)-Math.min(...ys)};
+  return {vertices, faces: faces.filter((_,i)=>i%stride===0), silhouette_faces: faces, source_face_count: faces.length, face_stride: stride, loader, bounds, height_cm: bounds.max[1] - bounds.min[1]};
 }
 
 function parseObjClient(text) {
@@ -2447,13 +2589,14 @@ function displayOffsets() {
   const rightZ = Number.isFinite(right.z) ? right.z : 0;
   const primaryBounds = scaledBoundsForTarget(mesh, 'primary');
   const compareBounds = scaledBoundsForTarget(compareMesh, 'compare');
-  const widthA = Math.max(1, primaryBounds.max[0] - primaryBounds.min[0]) * Math.abs(rightX) + Math.max(1, primaryBounds.max[2] - primaryBounds.min[2]) * Math.abs(rightZ);
-  const widthB = Math.max(1, compareBounds.max[0] - compareBounds.min[0]) * Math.abs(rightX) + Math.max(1, compareBounds.max[2] - compareBounds.min[2]) * Math.abs(rightZ);
+  const widthA = Math.max(1, primaryBounds.max[0] - primaryBounds.min[0]);
+  const widthB = Math.max(1, compareBounds.max[0] - compareBounds.min[0]);
   const heightA = primaryBounds.max[1] - primaryBounds.min[1];
   const heightB = compareBounds.max[1] - compareBounds.min[1];
   const bodyScale = Math.max(heightA, heightB);
   const visualWidth = Math.max(widthA, widthB);
-  const gap = Math.max(bodyScale * 0.42, visualWidth * 0.56) + 10;
+  const padding = Math.min(Math.max(bodyScale * 0.08, visualWidth * 0.12, 1), Math.max(bodyScale * 0.18, 1));
+  const gap = Math.max((widthA + widthB) / 2 + padding, visualWidth * 0.62);
   let primary = {x:rightX * gap / 2, y:0, z:rightZ * gap / 2};
   let compare = {x:-rightX * gap / 2, y:0, z:-rightZ * gap / 2};
   if (camera && canvas.width) {
@@ -3054,7 +3197,7 @@ function drawExtendedProjectedSegment(seg, minLength, extraLength, maxLength = I
   const len = Math.hypot(dx0, dy0);
   if (len < 1) return false;
   let target = Math.max(minLength, len + extraLength);
-  if (Number.isFinite(maxLength)) target = Math.min(target, Math.max(len, maxLength));
+  if (Number.isFinite(maxLength)) target = Math.min(target, Math.max(len, minLength, maxLength));
   const dx = dx0 / len;
   const dy = dy0 / len;
   const mx = (a[0] + b[0]) / 2;
@@ -3327,12 +3470,20 @@ function maxDraftDeviation(points) {
 }
 
 function boundsForPoints(points) {
-  const xs = points.map(point => point.x);
-  const ys = points.map(point => point.y);
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-  const maxX = Math.max(...xs);
-  const maxY = Math.max(...ys);
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const point of points || []) {
+    const x = Number(point.x);
+    const y = Number(point.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  if (!Number.isFinite(minX)) return {x:0, y:0, w:0, h:0};
   return {x:minX, y:minY, w:Math.max(0, maxX - minX), h:Math.max(0, maxY - minY)};
 }
 
@@ -4306,7 +4457,14 @@ function setViewPreset(key) {
 
 window.addEventListener('resize', () => requestDraw());
 
+function isTextEditingTarget(target) {
+  if (!target) return false;
+  const tag = (target.tagName || '').toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable;
+}
+
 window.addEventListener('keydown', e => {
+  if (isTextEditingTarget(e.target)) return;
   const key = e.key.toLowerCase();
   if ((e.ctrlKey || e.metaKey) && key === 'z') {
     e.preventDefault();
@@ -4697,6 +4855,19 @@ for (const input of [primaryModelOpacityInput, compareModelOpacityInput]) {
 if (heightScaleMatchPrimaryButton) heightScaleMatchPrimaryButton.addEventListener('click', () => { if (setHeightScaleMode('primary')) statusEl.textContent = textFor('heightScaleApplied'); });
 if (heightScaleMatchCompareButton) heightScaleMatchCompareButton.addEventListener('click', () => { if (setHeightScaleMode('compare')) statusEl.textContent = textFor('heightScaleApplied'); });
 if (heightScaleClearButton) heightScaleClearButton.addEventListener('click', () => { if (setHeightScaleMode('clear')) statusEl.textContent = textFor('heightScaleApplied'); });
+if (primaryScaleApplyButton) primaryScaleApplyButton.addEventListener('click', () => applyTargetDisplayHeight('primary'));
+if (compareScaleApplyButton) compareScaleApplyButton.addEventListener('click', () => applyTargetDisplayHeight('compare'));
+if (primaryScaleResetButton) primaryScaleResetButton.addEventListener('click', () => resetTargetDisplayScale('primary'));
+if (compareScaleResetButton) compareScaleResetButton.addEventListener('click', () => resetTargetDisplayScale('compare'));
+for (const [input, targetName] of [[primaryScaleTargetInput, 'primary'], [compareScaleTargetInput, 'compare']]) {
+  if (input) input.addEventListener('keydown', event => {
+    event.stopPropagation();
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyTargetDisplayHeight(targetName);
+    }
+  });
+}
 if (viewerBgColorInput) {
   viewerBgColorInput.addEventListener('input', () => { applyViewerBackground(); updateViewerBgColorControl(); requestDraw(); });
 }
