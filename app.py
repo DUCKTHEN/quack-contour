@@ -284,11 +284,11 @@ def html_page() -> bytes:
     .doodle-button.active, .doodle-button[aria-pressed="true"] { background:rgba(244,191,36,.16); border-color:rgba(244,191,36,.72); color:var(--accent); box-shadow:0 0 0 1px rgba(244,191,36,.13) inset; }
     .doodle-button svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
     .doodle-button .doodle-dot { width:17px; height:17px; border:2px solid currentColor; border-radius:50%; display:block; }
-    .doodle-color-input { width:34px; min-width:34px; height:34px; padding:3px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; cursor:pointer; }
-    .doodle-color-input::-webkit-color-swatch-wrapper { padding:0; }
-    .doodle-color-input::-webkit-color-swatch { border:0; border-radius:3px; }
-    .doodle-color-input::-moz-color-swatch { border:0; border-radius:3px; }
-    .doodle-color-input:hover, .doodle-color-input:focus-visible { border-color:rgba(244,191,36,.72); outline:none; }
+    input[type=color].doodle-color-input { width:38px; min-width:38px; max-width:38px; height:34px; min-height:34px; padding:3px; border:1px solid #2b2e35; border-radius:4px; background:#15171c; cursor:pointer; appearance:none; -webkit-appearance:none; }
+    input[type=color].doodle-color-input::-webkit-color-swatch-wrapper { padding:0; }
+    input[type=color].doodle-color-input::-webkit-color-swatch { border:0; border-radius:3px; }
+    input[type=color].doodle-color-input::-moz-color-swatch { border:0; border-radius:3px; }
+    input[type=color].doodle-color-input:hover, input[type=color].doodle-color-input:focus-visible { border-color:rgba(244,191,36,.72); outline:none; }
     .duck { width:38px; height:38px; border-radius:4px; object-fit:contain; image-rendering:auto; background:transparent; border:0; box-shadow:none; transition:transform 120ms ease, box-shadow 120ms ease; }
     main { height:calc(100vh - 68px); min-height:0; display:grid; grid-template-columns:var(--left-panel-width) minmax(620px,1fr) var(--right-panel-width); gap:10px; padding:0 10px 0 0; align-items:stretch; overflow:hidden; }
     .panel { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px; overflow:hidden; box-shadow:0 0 0 1px rgba(255,255,255,.015) inset; }
