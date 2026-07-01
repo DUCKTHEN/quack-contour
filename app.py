@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cgi
+import copy
 import csv
 import json
 import math
@@ -111,6 +112,65 @@ def config_from_lines(mesh_path: Path, lines_path: Path, title: str, display_hei
 
 
 
+
+
+def form_float(form: cgi.FieldStorage, key: str, default: float | None = None) -> float | None:
+    raw = form.getfirst(key, "")
+    if raw is None:
+        return default
+    raw = str(raw).strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    if not math.isfinite(value):
+        return default
+    return value
+
+
+def display_scale_from_form(form: cgi.FieldStorage, key: str) -> float:
+    value = form_float(form, key, 1.0)
+    if value is None:
+        return 1.0
+    return max(0.05, min(8.0, value))
+
+
+def scale_section_measurements(sections: list[dict], scale: float) -> list[dict]:
+    if abs(scale - 1.0) < 0.0001:
+        return sections
+    scaled = copy.deepcopy(sections)
+    for section in scaled:
+        if "height_from_floor_cm" in section:
+            section["height_from_floor_cm"] = float(section["height_from_floor_cm"]) * scale
+        if "mesh_y" in section:
+            section["mesh_y"] = float(section["mesh_y"]) * scale
+        if isinstance(section.get("points"), list):
+            section["points"] = [(float(point[0]) * scale, float(point[1]) * scale) for point in section["points"]]
+        summary = section.get("summary")
+        if isinstance(summary, dict):
+            if "perimeter" in summary:
+                summary["perimeter"] = float(summary["perimeter"]) * scale
+            if "centroid" in summary and isinstance(summary["centroid"], list):
+                summary["centroid"] = [float(value) * scale for value in summary["centroid"]]
+            if "bbox" in summary and isinstance(summary["bbox"], list):
+                summary["bbox"] = [float(value) * scale for value in summary["bbox"]]
+        spine = section.get("spine_estimate")
+        if isinstance(spine, dict) and "z" in spine:
+            spine["z"] = float(spine["z"]) * scale
+        scan_best = section.get("scan_best")
+        if isinstance(scan_best, list):
+            for record in scan_best:
+                if not isinstance(record, dict):
+                    continue
+                if "height_from_floor_cm" in record:
+                    record["height_from_floor_cm"] = float(record["height_from_floor_cm"]) * scale
+                if "perimeter" in record:
+                    record["perimeter"] = float(record["perimeter"]) * scale
+                if "diff" in record:
+                    record["diff"] = float(record["diff"]) * scale
+    return scaled
 
 def apply_interactive_generation_limits(config: dict) -> dict:
     """Keep browser-triggered section generation responsive.
@@ -280,6 +340,12 @@ def html_page() -> bytes:
     .model-control-row { display:grid; grid-template-columns:1fr 64px; gap:7px; align-items:center; }
     .model-color-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
     .model-opacity-row { display:grid; gap:6px; }
+    .height-scale-box { display:grid; gap:6px; padding:7px; border:1px solid #252d38; border-radius:5px; background:#111821; }
+    .height-scale-title { color:var(--muted); font-size:11px; font-weight:800; }
+    .height-scale-mode-row { display:grid; grid-template-columns:1fr 1fr 52px; gap:5px; }
+    .height-scale-mode-row button { height:30px; min-height:30px; padding:0 6px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .height-scale-mode-row button.active { background:rgba(244,191,36,.18); border-color:rgba(244,191,36,.75); color:var(--accent); }
+    .height-scale-note { min-height:14px; color:var(--muted); font-size:10px; line-height:1.35; }
     .model-opacity-control { display:grid; grid-template-columns:minmax(76px,.9fr) minmax(82px,1fr) 38px; align-items:center; gap:7px; margin:0; color:var(--muted); font-size:11px; font-weight:800; }
     .model-opacity-control input[type=range] { height:18px; min-width:0; padding:0; accent-color:var(--accent); }
     .model-opacity-value { color:var(--accent); font-size:11px; font-weight:900; text-align:right; font-variant-numeric:tabular-nums; }
@@ -480,6 +546,15 @@ def html_page() -> bytes:
             <label class="model-opacity-control"><span data-i18n="primaryOpacity">&#20027;&#12514;&#12487;&#12523;&#28611;&#12373;</span><input type="range" id="primaryModelOpacity" min="10" max="100" step="1" value="100"><strong id="primaryModelOpacityValue" class="model-opacity-value">100%</strong></label>
             <label class="model-opacity-control"><span data-i18n="compareOpacity">&#27604;&#36611;&#28611;&#12373;</span><input type="range" id="compareModelOpacity" min="10" max="100" step="1" value="100"><strong id="compareModelOpacityValue" class="model-opacity-value">100%</strong></label>
           </div>
+          <div class="height-scale-box">
+            <div class="height-scale-title" data-i18n="heightScaleTitle">&#34920;&#31034;&#36523;&#38263;&#21512;&#12431;&#12379;</div>
+            <div class="height-scale-mode-row">
+              <button type="button" id="heightScaleMatchPrimary" class="secondary" data-i18n="heightScaleMatchPrimary">&#20027;&#12395;&#21512;&#12431;&#12379;&#12427;</button>
+              <button type="button" id="heightScaleMatchCompare" class="secondary" data-i18n="heightScaleMatchCompare">&#27604;&#36611;&#12395;&#21512;&#12431;&#12379;&#12427;</button>
+              <button type="button" id="heightScaleClear" class="secondary" data-i18n="heightScaleClear">&#35299;&#38500;</button>
+            </div>
+            <div class="height-scale-note" id="heightScaleNote"></div>
+          </div>
           <div class="model-color-row background-color-row">
             <label class="model-color"><span data-i18n="viewerBgColor">背景色</span><input type="color" id="viewerBgColor" value="#ffffff"></label>
           </div>
@@ -664,6 +739,10 @@ const primaryModelOpacityInput = document.getElementById('primaryModelOpacity');
 const compareModelOpacityInput = document.getElementById('compareModelOpacity');
 const primaryModelOpacityValue = document.getElementById('primaryModelOpacityValue');
 const compareModelOpacityValue = document.getElementById('compareModelOpacityValue');
+const heightScaleMatchPrimaryButton = document.getElementById('heightScaleMatchPrimary');
+const heightScaleMatchCompareButton = document.getElementById('heightScaleMatchCompare');
+const heightScaleClearButton = document.getElementById('heightScaleClear');
+const heightScaleNote = document.getElementById('heightScaleNote');
 const viewerBgColorInput = document.getElementById('viewerBgColor');
 const brandSoundButton = document.getElementById('brandSoundButton');
 const duckQuackAudio = typeof Audio !== 'undefined' ? new Audio('/asset/duck-quacking-37392.mp3') : null;
@@ -691,6 +770,26 @@ const UI_TEXT = {
     maskCreated:'Masked selected mesh faces', needBothModels:'Load both primary and compare models', helpText:'Left drag to rotate. Use horizontal rotation to inspect front, back, and sides. When Draw mask is on, left drag creates a rectangular or lasso mask. Drag the colored dots on the side height bars to move section positions vertically. Middle mouse, right drag, or Shift+left drag pans. Mouse wheel zooms. Fit view frames the current view. View keys follow CLO/Marvelous style: 2 front, 8 back, 4/6 sides, 5 top. Press P to switch orthographic/perspective.', exportNoModel:'Load a model before exporting.', pngExportFailed:'PNG export failed.', silhouettePngLink:'PNG', silhouetteExported:'Silhouette PNG is ready.', compareGenerating:'Generating compare report', compareFailed:'Compare report failed.', compareComplete:'Compare report complete', tableLine:'Line', tablePrimary:'Primary cm', tableCompare:'Compare cm', tableDiff:'Diff cm', generating:'Generating', generateFailed:'Generation failed', done:'Done', tablePerimeter:'Perimeter cm', tableHeight:'Height cm', renderError:'3D display error: ', meshNotFound:'Mesh geometry was not found.', objOnlyError:'Only OBJ files are supported for now. Choose an OBJ file.', fbxBinaryUnsupported:'Binary FBX is not supported yet. Export ASCII FBX or OBJ from CLO/Marvelous.', fbxArraysNotFound:'Vertices / PolygonVertexIndex arrays were not found in the ASCII FBX.', fbxVerticesInvalid:'The FBX Vertices array count is not divisible by 3.', fileRequired:'Specify an OBJ path or choose an OBJ file.', resetStatus:'Reset. Import an OBJ to begin.', initialStatus:'No model loaded. Import an OBJ to begin.'
   }
 };
+Object.assign(UI_TEXT.ja, {
+  heightScaleTitle:'\u8868\u793a\u8eab\u9577\u5408\u308f\u305b',
+  heightScaleMatchPrimary:'\u4e3b\u306b\u5408\u308f\u305b\u308b',
+  heightScaleMatchCompare:'\u6bd4\u8f03\u306b\u5408\u308f\u305b\u308b',
+  heightScaleClear:'\u89e3\u9664',
+  heightScaleViewOnly:'\u8868\u793a\u3068\u65ad\u9762\u56f3\u306e\u5bf8\u6cd5\u306b\u53cd\u6620\u3057\u307e\u3059\u3002\u5143OBJ\u306f\u5909\u66f4\u3057\u307e\u305b\u3093\u3002',
+  heightScaleNoModel:'OBJ\u3092\u8aad\u307f\u8fbc\u3080\u3068\u8eab\u9577\u5408\u308f\u305b\u3092\u4f7f\u3048\u307e\u3059\u3002',
+  heightScaleNeedBoth:'\u4e3b\u30fb\u6bd4\u8f03\u306e\u4e21\u65b9\u3092\u8aad\u307f\u8fbc\u3080\u3068\u4f7f\u3048\u307e\u3059\u3002',
+  heightScaleApplied:'\u8868\u793a\u8eab\u9577\u5408\u308f\u305b\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002'
+});
+Object.assign(UI_TEXT.en, {
+  heightScaleTitle:'Display height match',
+  heightScaleMatchPrimary:'Match primary',
+  heightScaleMatchCompare:'Match compare',
+  heightScaleClear:'Clear',
+  heightScaleViewOnly:'Applies to display and section output dimensions. Source OBJ files are not changed.',
+  heightScaleNoModel:'Load an OBJ to use height matching.',
+  heightScaleNeedBoth:'Load both primary and compare models to use height matching.',
+  heightScaleApplied:'Display height matching updated.'
+});
 let currentLanguage = localStorage.getItem('quackContourLanguage') || 'ja';
 function textFor(key) { return (UI_TEXT[currentLanguage] && UI_TEXT[currentLanguage][key]) || UI_TEXT.ja[key] || key; }
 function historyText(key) {
@@ -714,6 +813,7 @@ function applyLanguage() {
   updateUndoButtons();
   updateDoodleButtons();
   updateDoodleColorControl();
+  updateHeightScaleControls();
   draw();
 }
 function switchLanguage() {
@@ -725,6 +825,8 @@ let mesh = null;
 let compareMesh = null;
 let primaryVisible = true;
 let compareVisible = true;
+let primaryDisplayScale = 1;
+let compareDisplayScale = 1;
 let lines = [];
 let compareLines = [];
 let loadedLineRows = [];
@@ -1118,6 +1220,8 @@ function snapshotContour() {
     compareMesh,
     primaryVisible,
     compareVisible,
+    primaryDisplayScale,
+    compareDisplayScale,
     lines: clonePlain(lines),
     compareLines: clonePlain(compareLines),
     loadedLineRows: clonePlain(loadedLineRows),
@@ -1158,6 +1262,8 @@ function restoreContour(snapshot) {
   compareMesh = snapshot.compareMesh || null;
   primaryVisible = snapshot.primaryVisible !== false && !!mesh;
   compareVisible = snapshot.compareVisible !== false && !!compareMesh;
+  primaryDisplayScale = Number.isFinite(snapshot.primaryDisplayScale) ? snapshot.primaryDisplayScale : 1;
+  compareDisplayScale = Number.isFinite(snapshot.compareDisplayScale) ? snapshot.compareDisplayScale : 1;
   lines = clonePlain(snapshot.lines || []);
   compareLines = clonePlain(snapshot.compareLines || []);
   loadedLineRows = clonePlain(snapshot.loadedLineRows || []);
@@ -1548,6 +1654,142 @@ function modelOpacity(targetName) {
   return modelOpacityPercent(targetName) / 100;
 }
 
+function displayScaleForTarget(targetName) {
+  const value = targetName === 'compare' ? compareDisplayScale : primaryDisplayScale;
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function displayHeightForTarget(targetName) {
+  const targetMesh = meshForLineTarget(targetName);
+  return targetMesh ? targetMesh.height_cm * displayScaleForTarget(targetName) : 0;
+}
+
+function applyDisplayScaleState(options = {}) {
+  geometryDirty = true;
+  updateHeightScaleControls();
+  updateMeshMeta();
+  renderLineList();
+  if (heightScaleNote) heightScaleNote.textContent = textFor('heightScaleViewOnly');
+  if (options.fit !== false) fitViewToModels();
+  else draw();
+}
+
+function setDisplayScaleForTarget(targetName, scale, options = {}) {
+  const targetMesh = meshForLineTarget(targetName);
+  if (!targetMesh) return false;
+  const next = Math.max(0.05, Math.min(8, Number.isFinite(scale) ? scale : 1));
+  if (options.push !== false) pushHistory();
+  if (targetName === 'compare') compareDisplayScale = next;
+  else primaryDisplayScale = next;
+  applyDisplayScaleState(options);
+  return true;
+}
+
+function resetAllDisplayScales(options = {}) {
+  if (!mesh && !compareMesh) return false;
+  if (options.push !== false) pushHistory();
+  primaryDisplayScale = 1;
+  compareDisplayScale = 1;
+  applyDisplayScaleState(options);
+  return true;
+}
+
+function setHeightScaleMode(mode) {
+  if (mode === 'clear') return resetAllDisplayScales();
+  if (!mesh || !compareMesh) return false;
+  pushHistory();
+  if (mode === 'primary') {
+    primaryDisplayScale = 1;
+    compareDisplayScale = mesh.height_cm > 0 && compareMesh.height_cm > 0 ? mesh.height_cm / compareMesh.height_cm : 1;
+  } else if (mode === 'compare') {
+    compareDisplayScale = 1;
+    primaryDisplayScale = mesh.height_cm > 0 && compareMesh.height_cm > 0 ? compareMesh.height_cm / mesh.height_cm : 1;
+  } else {
+    primaryDisplayScale = 1;
+    compareDisplayScale = 1;
+  }
+  applyDisplayScaleState();
+  return true;
+}
+
+function currentHeightScaleMode() {
+  const primaryScale = displayScaleForTarget('primary');
+  const compareScale = displayScaleForTarget('compare');
+  if (Math.abs(primaryScale - 1) < 0.001 && Math.abs(compareScale - 1) < 0.001) return 'clear';
+  if (mesh && compareMesh) {
+    const primaryHeight = displayHeightForTarget('primary');
+    const compareHeight = displayHeightForTarget('compare');
+    if (Math.abs(primaryHeight - compareHeight) < 0.05) {
+      if (Math.abs(primaryScale - 1) < 0.001) return 'primary';
+      if (Math.abs(compareScale - 1) < 0.001) return 'compare';
+    }
+  }
+  return 'custom';
+}
+
+function scaledPointForTarget(targetMesh, targetName, v, offset = zeroOffset()) {
+  const b = targetMesh.bounds;
+  const s = displayScaleForTarget(targetName);
+  const o = normalizeOffset(offset);
+  const cx = (b.min[0] + b.max[0]) / 2;
+  const cz = (b.min[2] + b.max[2]) / 2;
+  const floor = b.min[1];
+  return [
+    cx + (v[0] - cx) * s + o.x,
+    floor + (v[1] - floor) * s + o.y,
+    cz + (v[2] - cz) * s + o.z,
+  ];
+}
+
+function scaledBoundsForTarget(targetMesh, targetName, offset = zeroOffset()) {
+  const b = targetMesh.bounds;
+  const s = displayScaleForTarget(targetName);
+  const o = normalizeOffset(offset);
+  const cx = (b.min[0] + b.max[0]) / 2;
+  const cz = (b.min[2] + b.max[2]) / 2;
+  const x0 = cx + (b.min[0] - cx) * s + o.x;
+  const x1 = cx + (b.max[0] - cx) * s + o.x;
+  const z0 = cz + (b.min[2] - cz) * s + o.z;
+  const z1 = cz + (b.max[2] - cz) * s + o.z;
+  return {
+    min:[Math.min(x0, x1), b.min[1] + o.y, Math.min(z0, z1)],
+    max:[Math.max(x0, x1), b.min[1] + (b.max[1] - b.min[1]) * s + o.y, Math.max(z0, z1)],
+  };
+}
+
+function lineWorldY(targetMesh, targetName, line, offset = zeroOffset()) {
+  const o = normalizeOffset(offset);
+  const h = parseFloat(line.height_from_floor_cm || '0');
+  return targetMesh.bounds.min[1] + (Number.isFinite(h) ? h : 0) * displayScaleForTarget(targetName) + o.y;
+}
+
+function projectPointForTarget(v, targetMesh, targetName, offset = zeroOffset()) {
+  return projectPoint(scaledPointForTarget(targetMesh, targetName, v, offset));
+}
+
+function updateHeightScaleControls() {
+  const hasPrimary = !!mesh;
+  const hasCompare = !!compareMesh;
+  const mode = currentHeightScaleMode();
+  const buttons = [
+    [heightScaleMatchPrimaryButton, 'primary'],
+    [heightScaleMatchCompareButton, 'compare'],
+    [heightScaleClearButton, 'clear'],
+  ];
+  for (const [button, buttonMode] of buttons) {
+    if (!button) continue;
+    button.disabled = buttonMode === 'clear' ? !(hasPrimary || hasCompare) : !(hasPrimary && hasCompare);
+    button.classList.toggle('active', mode === buttonMode);
+  }
+  if (!heightScaleNote) return;
+  if (!hasPrimary && !hasCompare) {
+    heightScaleNote.textContent = textFor('heightScaleNoModel');
+  } else if (!(hasPrimary && hasCompare)) {
+    heightScaleNote.textContent = textFor('heightScaleNeedBoth');
+  } else {
+    heightScaleNote.textContent = textFor('heightScaleViewOnly');
+  }
+}
 function isOverlayLayout() {
   return !!(compareLayoutInput && compareLayoutInput.value === 'overlay');
 }
@@ -1588,6 +1830,7 @@ function updateModelControls() {
   deleteCompareModelButton.disabled = !compareMesh;
   showPrimaryModelInput.checked = primaryVisible && !!mesh;
   showCompareModelInput.checked = compareVisible && !!compareMesh;
+  updateHeightScaleControls();
 }
 function meshForLineTarget(targetName) {
   return targetName === 'compare' ? compareMesh : mesh;
@@ -1801,7 +2044,9 @@ function sectionWarnings(targetName, line, index) {
 function sectionValueText(targetName, line) {
   const targetMesh = meshForLineTarget(targetName);
   const perimeter = sectionPerimeterCm(targetMesh, line);
-  return perimeter == null ? '--' : `${perimeter.toFixed(2)} cm`;
+  if (perimeter == null) return '--';
+  const displayed = perimeter * displayScaleForTarget(targetName);
+  return `${displayed.toFixed(2)} cm`;
 }
 
 function zeroOffset() {
@@ -2130,17 +2375,22 @@ function updateModelDiagnostics() {
   modelDiagnostics.innerHTML = `<div class="diagnostic-panel-title"><span>${escapeHtml(panelTitle)}</span></div><div class="diagnostic-empty">${escapeHtml(panelHelp)}</div>` + (items.length ? items.join('') : `<div class="diagnostic-empty">${escapeHtml(emptyText)}</div>`);
 }
 
-function formatMeshSummary(label, targetMesh) {
+function formatMeshSummary(label, targetMesh, targetName = 'primary') {
   if (!targetMesh) return '';
   const sourceFaces = targetMesh.source_face_count || targetMesh.faces.length;
-  return '<div class="mesh-count">' + escapeHtml(label) + ': ' + textFor('meshVertices') + ' ' + targetMesh.vertices.length.toLocaleString() + ' / ' + textFor('meshFaces') + ' ' + sourceFaces.toLocaleString() + ' / ' + textFor('meshShown') + ' ' + targetMesh.faces.length.toLocaleString() + '</div><div>' + textFor('meshHeight') + ' ' + targetMesh.height_cm.toFixed(2) + ' cm</div>';
+  const scale = displayScaleForTarget(targetName);
+  const displayHeight = targetMesh.height_cm * scale;
+  const heightText = Math.abs(scale - 1) > 0.001
+    ? textFor('meshHeight') + ' ' + targetMesh.height_cm.toFixed(2) + ' cm / ' + (currentLanguage === 'ja' ? '\u8868\u793a' : 'display') + ' ' + displayHeight.toFixed(1) + ' cm (' + Math.round(scale * 100) + '%)'
+    : textFor('meshHeight') + ' ' + targetMesh.height_cm.toFixed(2) + ' cm';
+  return '<div class="mesh-count">' + escapeHtml(label) + ': ' + textFor('meshVertices') + ' ' + targetMesh.vertices.length.toLocaleString() + ' / ' + textFor('meshFaces') + ' ' + sourceFaces.toLocaleString() + ' / ' + textFor('meshShown') + ' ' + targetMesh.faces.length.toLocaleString() + '</div><div>' + heightText + '</div>';
 }
 
 function updateMeshMeta() {
   updateImportedFileNames();
   const parts = [];
-  if (mesh) parts.push(formatMeshSummary(textFor('primaryModel'), mesh));
-  if (compareMesh) parts.push(formatMeshSummary(textFor('compareModel'), compareMesh));
+  if (mesh) parts.push(formatMeshSummary(textFor('primaryModel'), mesh, 'primary'));
+  if (compareMesh) parts.push(formatMeshSummary(textFor('compareModel'), compareMesh, 'compare'));
   meshMeta.innerHTML = parts.join('<hr style="border:0;border-top:1px solid #eee6dc;margin:8px 0;">');
   updateModelDiagnostics();
 }
@@ -2162,26 +2412,28 @@ function displayOffsets() {
   const {right} = currentViewBasis();
   const rightX = Number.isFinite(right.x) ? right.x : 1;
   const rightZ = Number.isFinite(right.z) ? right.z : 0;
-  const widthA = meshWidthX(mesh) * Math.abs(rightX) + meshWidthZ(mesh) * Math.abs(rightZ);
-  const widthB = meshWidthX(compareMesh) * Math.abs(rightX) + meshWidthZ(compareMesh) * Math.abs(rightZ);
-  const heightA = mesh.bounds.max[1] - mesh.bounds.min[1];
-  const heightB = compareMesh.bounds.max[1] - compareMesh.bounds.min[1];
+  const primaryBounds = scaledBoundsForTarget(mesh, 'primary');
+  const compareBounds = scaledBoundsForTarget(compareMesh, 'compare');
+  const widthA = Math.max(1, primaryBounds.max[0] - primaryBounds.min[0]) * Math.abs(rightX) + Math.max(1, primaryBounds.max[2] - primaryBounds.min[2]) * Math.abs(rightZ);
+  const widthB = Math.max(1, compareBounds.max[0] - compareBounds.min[0]) * Math.abs(rightX) + Math.max(1, compareBounds.max[2] - compareBounds.min[2]) * Math.abs(rightZ);
+  const heightA = primaryBounds.max[1] - primaryBounds.min[1];
+  const heightB = compareBounds.max[1] - compareBounds.min[1];
   const bodyScale = Math.max(heightA, heightB);
   const visualWidth = Math.max(widthA, widthB);
   const gap = Math.max(bodyScale * 0.42, visualWidth * 0.56) + 10;
   let primary = {x:rightX * gap / 2, y:0, z:rightZ * gap / 2};
   let compare = {x:-rightX * gap / 2, y:0, z:-rightZ * gap / 2};
   if (camera && canvas.width) {
-    const primaryCenter = projectPointWithOffset([
+    const primaryCenter = projectPointForTarget([
       (mesh.bounds.min[0] + mesh.bounds.max[0]) / 2,
       (mesh.bounds.min[1] + mesh.bounds.max[1]) / 2,
       (mesh.bounds.min[2] + mesh.bounds.max[2]) / 2,
-    ], primary);
-    const compareCenter = projectPointWithOffset([
+    ], mesh, 'primary', primary);
+    const compareCenter = projectPointForTarget([
       (compareMesh.bounds.min[0] + compareMesh.bounds.max[0]) / 2,
       (compareMesh.bounds.min[1] + compareMesh.bounds.max[1]) / 2,
       (compareMesh.bounds.min[2] + compareMesh.bounds.max[2]) / 2,
-    ], compare);
+    ], compareMesh, 'compare', compare);
     if (Number.isFinite(primaryCenter[0]) && Number.isFinite(compareCenter[0]) && primaryCenter[0] < compareCenter[0]) {
       primary = {x:-rightX * gap / 2, y:0, z:-rightZ * gap / 2};
       compare = {x:rightX * gap / 2, y:0, z:rightZ * gap / 2};
@@ -2190,13 +2442,8 @@ function displayOffsets() {
   return {primary, compare};
 }
 
-function boundsWithOffset(targetMesh, offset = zeroOffset()) {
-  const b = targetMesh.bounds;
-  const o = normalizeOffset(offset);
-  return {
-    min:[b.min[0] + o.x, b.min[1] + o.y, b.min[2] + o.z],
-    max:[b.max[0] + o.x, b.max[1] + o.y, b.max[2] + o.z],
-  };
+function boundsWithOffset(targetMesh, offset = zeroOffset(), targetName = 'primary') {
+  return scaledBoundsForTarget(targetMesh, targetName, offset);
 }
 
 function combinedDisplayBounds() {
@@ -2204,9 +2451,9 @@ function combinedDisplayBounds() {
   const offsets = displayOffsets();
   const bounds = [];
   const includeHiddenPair = !!(forceSeparateOffsetsForOutline && mesh && compareMesh);
-  if ((primaryVisible || includeHiddenPair) && mesh) bounds.push(boundsWithOffset(mesh, offsets.primary));
-  if ((compareVisible || includeHiddenPair) && compareMesh) bounds.push(boundsWithOffset(compareMesh, offsets.compare));
-  if (!bounds.length) bounds.push(boundsWithOffset(mesh, zeroOffset()));
+  if ((primaryVisible || includeHiddenPair) && mesh) bounds.push(boundsWithOffset(mesh, offsets.primary, 'primary'));
+  if ((compareVisible || includeHiddenPair) && compareMesh) bounds.push(boundsWithOffset(compareMesh, offsets.compare, 'compare'));
+  if (!bounds.length) bounds.push(boundsWithOffset(mesh, zeroOffset(), 'primary'));
   return {
     min:[
       Math.min(...bounds.map(b => b.min[0])),
@@ -2223,6 +2470,8 @@ function combinedDisplayBounds() {
 async function loadModel() {
   statusEl.textContent = '';
   mesh = await loadMeshFromInputs('meshFile', 'meshPath');
+  primaryDisplayScale = 1;
+  compareDisplayScale = 1;
   primaryVisible = true;
   showPrimaryModelInput.checked = true;
   armMaskCache = null;
@@ -2259,6 +2508,7 @@ async function loadCompareModel() {
   if (!mesh) throw new Error(textFor('mainFirst'));
   statusEl.textContent = '';
   compareMesh = await loadMeshFromInputs('compareMeshFile', 'compareMeshPath');
+  compareDisplayScale = 1;
   compareVisible = true;
   showCompareModelInput.checked = true;
   armMaskCache = null;
@@ -2289,6 +2539,7 @@ function clearThreeObject() {
 function deleteCompareModel() {
   if (compareMesh) pushHistory();
   compareMesh = null;
+  compareDisplayScale = 1;
   compareLines = [];
   compareVisible = false;
   if (activeLineTarget === 'compare') activeLineTarget = 'primary';
@@ -2307,6 +2558,8 @@ function deletePrimaryModel() {
   if (mesh || compareMesh) pushHistory();
   mesh = null;
   compareMesh = null;
+  primaryDisplayScale = 1;
+  compareDisplayScale = 1;
   lines = [];
   compareLines = [];
   loadedLineRows = [];
@@ -2387,6 +2640,8 @@ function resetFromBrandDuck() {
   pushHistory();
   mesh = null;
   compareMesh = null;
+  primaryDisplayScale = 1;
+  compareDisplayScale = 1;
   lines = [];
   compareLines = [];
   loadedLineRows = [];
@@ -2786,8 +3041,8 @@ function drawFallbackScreenGuide(center, length) {
 
 function drawLinePlane(line, targetMesh = mesh, offset = zeroOffset(), targetName = 'primary') {
   if (!targetMesh) return;
-  const b = boundsWithOffset(targetMesh, offset);
-  const y = targetMesh.bounds.min[1] + parseFloat(line.height_from_floor_cm || '0');
+  const b = boundsWithOffset(targetMesh, offset, targetName);
+  const y = lineWorldY(targetMesh, targetName, line, offset);
   const cx = (b.min[0] + b.max[0]) / 2;
   const cz = (b.min[2] + b.max[2]) / 2;
   const isActive = targetName === activeLineTarget && line === currentLines()[activeIndex];
@@ -2814,7 +3069,8 @@ function drawLinePlane(line, targetMesh = mesh, offset = zeroOffset(), targetNam
     if (twoModelCompare) {
       const peerMesh = targetName === 'compare' ? mesh : compareMesh;
       const peerOffset = targetName === 'compare' ? displayOffsets().primary : displayOffsets().compare;
-      const peerBounds = boundsWithOffset(peerMesh, peerOffset);
+      const peerTargetName = targetName === 'compare' ? 'primary' : 'compare';
+      const peerBounds = boundsWithOffset(peerMesh, peerOffset, peerTargetName);
       const center = project([cx, y, cz]);
       const peerCenter = project([
         (peerBounds.min[0] + peerBounds.max[0]) / 2,
@@ -2867,11 +3123,11 @@ function screenYToHeightCm(screenY) {
   const targetMesh = currentMesh();
   if (!targetMesh) return null;
   const offset = normalizeOffset(currentOffset());
-  const b = targetMesh.bounds;
-  const cx = (b.min[0] + b.max[0]) / 2 + offset.x;
-  const cz = (b.min[2] + b.max[2]) / 2 + offset.z;
-  const floorY = project([cx, b.min[1] + offset.y, cz])[1];
-  const headY = project([cx, b.max[1] + offset.y, cz])[1];
+  const b = boundsWithOffset(targetMesh, offset, activeLineTarget);
+  const cx = (b.min[0] + b.max[0]) / 2;
+  const cz = (b.min[2] + b.max[2]) / 2;
+  const floorY = project([cx, b.min[1], cz])[1];
+  const headY = project([cx, b.max[1], cz])[1];
   const denom = floorY - headY;
   if (Math.abs(denom) < 1) return null;
   const ratio = (floorY - screenY) / denom;
@@ -3108,7 +3364,7 @@ function createMaskForTargetFromShape(targetName, shape) {
   const bottom = rect.y + rect.h;
   const vertices = [];
   for (let i = 0; i < targetMesh.vertices.length; i += 1) {
-    const p = projectPointWithOffset(targetMesh.vertices[i], offset);
+    const p = projectPointForTarget(targetMesh.vertices[i], targetMesh, targetName, offset);
     if (!Number.isFinite(p[0]) || !Number.isFinite(p[1]) || p[2] < -1.2 || p[2] > 1.2) continue;
     if (p[0] < rect.x || p[0] > right || p[1] < rect.y || p[1] > bottom) continue;
     const inside = shape.type === 'lasso' ? pointInPolygon({x:p[0], y:p[1]}, shape.points) : true;
@@ -3155,7 +3411,7 @@ function projectedMaskRect(mask) {
   for (const idx of mask.vertices) {
     const v = targetMesh.vertices[idx];
     if (!v) continue;
-    const p = projectPointWithOffset(v, offset);
+    const p = projectPointForTarget(v, targetMesh, mask.targetName, offset);
     if (!Number.isFinite(p[0]) || !Number.isFinite(p[1]) || p[2] < -1.2 || p[2] > 1.2) continue;
     minX = Math.min(minX, p[0]);
     minY = Math.min(minY, p[1]);
@@ -3410,15 +3666,15 @@ function drawModelCenterLines() {
   if (!showCenterLinesInput || !showCenterLinesInput.checked || !mesh) return;
   const offsets = displayOffsets();
   const targets = [];
-  if (primaryVisible && mesh) targets.push({targetMesh: mesh, offset: offsets.primary});
-  if (compareMesh && compareVisible) targets.push({targetMesh: compareMesh, offset: offsets.compare});
+  if (primaryVisible && mesh) targets.push({targetMesh: mesh, offset: offsets.primary, targetName:'primary'});
+  if (compareMesh && compareVisible) targets.push({targetMesh: compareMesh, offset: offsets.compare, targetName:'compare'});
   if (!targets.length) return;
   ctx.save();
   ctx.strokeStyle = 'rgba(92, 102, 112, 0.72)';
   ctx.lineWidth = 2;
   ctx.setLineDash([]);
   for (const target of targets) {
-    const b = boundsWithOffset(target.targetMesh, target.offset);
+    const b = boundsWithOffset(target.targetMesh, target.offset, target.targetName);
     const cx = (b.min[0] + b.max[0]) / 2;
     const cz = (b.min[2] + b.max[2]) / 2;
     const p0 = project([cx, b.min[1], cz]);
@@ -3522,7 +3778,7 @@ function fitViewToModels() {
   }
   const margin = 1.26;
   const requiredViewHeight = Math.max(maxUp * 2 * margin, (maxRight * 2 * margin) / aspect, 1);
-  const modelHeight = Math.max(mesh.height_cm, compareMesh ? compareMesh.height_cm : 0, 1);
+  const modelHeight = Math.max(displayHeightForTarget('primary'), displayHeightForTarget('compare'), 1);
   const baseViewHeight = orthographic ? modelHeight * 1.15 : modelHeight * 2.1 * 2 * Math.tan(35 * Math.PI / 360);
   zoom = Math.max(0.08, Math.min(5.0, baseViewHeight / requiredViewHeight));
   panX = 0;
@@ -3534,7 +3790,7 @@ function fitViewToModels() {
 }
 function updateThreeCamera() {
   const aspect = glCanvas.width / glCanvas.height;
-  const viewHeight = Math.max(mesh.height_cm, compareMesh ? compareMesh.height_cm : 0, 1) * 1.15 / zoom;
+  const viewHeight = Math.max(displayHeightForTarget('primary'), displayHeightForTarget('compare'), 1) * 1.15 / zoom;
   if (orthographic) {
     if (!camera || !camera.isOrthographicCamera) {
       camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10000);
@@ -3562,7 +3818,7 @@ function updateThreeCamera() {
   const worldPerPixel = viewHeight / glCanvas.height;
   target.addScaledVector(right, -panX * worldPerPixel);
   target.addScaledVector(up, panY * worldPerPixel);
-  const distance = Math.max(mesh.height_cm, compareMesh ? compareMesh.height_cm : 0, 1) * (orthographic ? 2.4 : 2.1 / zoom);
+  const distance = Math.max(displayHeightForTarget('primary'), displayHeightForTarget('compare'), 1) * (orthographic ? 2.4 : 2.1 / zoom);
   camera.position.copy(target).addScaledVector(dir, distance);
   camera.up.copy(up);
   camera.lookAt(target);
@@ -3600,7 +3856,7 @@ function rebuildFloorGrid() {
   if (!b) return;
   const width = Math.max(b.max[0] - b.min[0], 80);
   const depth = Math.max(b.max[2] - b.min[2], 80);
-  const span = Math.max(width, depth, mesh.height_cm || 120) * 1.15;
+  const span = Math.max(width, depth, displayHeightForTarget('primary') || 120, displayHeightForTarget('compare') || 0) * 1.15;
   const centerX = (b.min[0] + b.max[0]) / 2;
   const centerZ = (b.min[2] + b.max[2]) / 2;
   const y = b.min[1] - 0.35;
@@ -3655,7 +3911,8 @@ function buildThreeModelObject(targetMesh, offset, color, targetName = 'primary'
     if (isFaceMaskedByUserMasks(targetName, f)) continue;
     for (const idx of f) {
       const v = targetMesh.vertices[idx];
-      positions.push(v[0], v[1], v[2]);
+      const p = scaledPointForTarget(targetMesh, targetName, v, offset);
+      positions.push(p[0], p[1], p[2]);
     }
   }
   const geometry = new THREE.BufferGeometry();
@@ -3674,7 +3931,7 @@ function buildThreeModelObject(targetMesh, offset, color, targetName = 'primary'
   object.renderOrder = overlay ? (targetName === 'compare' ? 10 : 20) : 0;
   object.userData = {modelShape: true, targetName};
   object.frustumCulled = false;
-  object.position.set(o.x, o.y, o.z);
+  object.position.set(0, 0, 0);
   return object;
 }
 
@@ -3744,16 +4001,15 @@ function drawModelLabels() {
   if (!mesh) return;
   const offsets = displayOffsets();
   const items = [];
-  if (primaryVisible && mesh) items.push({label:textFor('primaryModel'), target:mesh, offset:offsets.primary, color:modelColor('primary')});
-  if (compareVisible && compareMesh) items.push({label:textFor('compareModel'), target:compareMesh, offset:offsets.compare, color:modelColor('compare')});
+  if (primaryVisible && mesh) items.push({label:textFor('primaryModel'), target:mesh, offset:offsets.primary, color:modelColor('primary'), targetName:'primary'});
+  if (compareVisible && compareMesh) items.push({label:textFor('compareModel'), target:compareMesh, offset:offsets.compare, color:modelColor('compare'), targetName:'compare'});
   ctx.save();
   ctx.font = '700 13px Meiryo';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const item of items) {
-    const b = item.target.bounds;
-    const o = normalizeOffset(item.offset);
-    const p = project([(b.min[0] + b.max[0]) / 2 + o.x, b.max[1] + o.y, (b.min[2] + b.max[2]) / 2 + o.z]);
+    const b = boundsWithOffset(item.target, item.offset, item.targetName);
+    const p = project([(b.min[0] + b.max[0]) / 2, b.max[1], (b.min[2] + b.max[2]) / 2]);
     const labelY = Math.max(18, p[1] - 24);
     ctx.fillStyle = 'rgba(255,255,255,0.88)';
     const width = ctx.measureText(item.label).width + 14;
@@ -4378,6 +4634,9 @@ for (const input of [primarySilhouetteColorInput, compareSilhouetteColorInput]) 
 for (const input of [primaryModelOpacityInput, compareModelOpacityInput]) {
   if (input) input.addEventListener('input', () => { updateModelOpacityLabels(); requestDraw(); });
 }
+if (heightScaleMatchPrimaryButton) heightScaleMatchPrimaryButton.addEventListener('click', () => { if (setHeightScaleMode('primary')) statusEl.textContent = textFor('heightScaleApplied'); });
+if (heightScaleMatchCompareButton) heightScaleMatchCompareButton.addEventListener('click', () => { if (setHeightScaleMode('compare')) statusEl.textContent = textFor('heightScaleApplied'); });
+if (heightScaleClearButton) heightScaleClearButton.addEventListener('click', () => { if (setHeightScaleMode('clear')) statusEl.textContent = textFor('heightScaleApplied'); });
 if (viewerBgColorInput) {
   viewerBgColorInput.addEventListener('input', () => { applyViewerBackground(); requestDraw(); });
 }
@@ -4484,6 +4743,17 @@ function exportSilhouettePng() {
     resultStatus.textContent = textFor('silhouetteExported');
   }, 'image/png');
 }
+function attachDisplayScaleFields(data) {
+  const primaryScale = displayScaleForTarget('primary');
+  const compareScale = displayScaleForTarget('compare');
+  data.set('primary_display_scale', primaryScale.toFixed(8));
+  data.set('compare_display_scale', compareScale.toFixed(8));
+  const primaryHeight = displayHeightForTarget('primary');
+  const compareHeight = displayHeightForTarget('compare');
+  data.set('display_height_cm', primaryHeight ? primaryHeight.toFixed(4) : '');
+  data.set('compare_display_height_cm', compareHeight ? compareHeight.toFixed(4) : '');
+}
+
 async function generateCompareReport() {
   if (!mesh || !compareMesh) throw new Error(textFor('needBothModels'));
   const button = document.getElementById('compareReportButton');
@@ -4491,6 +4761,7 @@ async function generateCompareReport() {
   resultStatus.textContent = textFor('compareGenerating');
   try {
     const data = new FormData(form);
+    attachDisplayScaleFields(data);
     data.append('compare_mode', '1');
     data.append('primary_lines_text', csvFromVisibleLinesOrThrow(lines));
     data.append('compare_lines_text', csvFromVisibleLinesOrThrow(compareLines.length ? compareLines : cloneLinesForMesh(lines, mesh, compareMesh)));
@@ -4519,6 +4790,7 @@ form.addEventListener('submit', async (event) => {
   button.disabled = true; resultStatus.textContent = textFor('generating');
   try {
     const data = new FormData(form);
+    attachDisplayScaleFields(data);
     data.append('lines_text', csvFromVisibleLinesOrThrow());
     const res = await fetch('/api/generate', {method:'POST', body:data});
     const payload = await res.json();
@@ -4655,19 +4927,29 @@ class Handler(BaseHTTPRequestHandler):
                     path_key="compare_lines_path",
                     fallback_prefix="secondary_compare_lines",
                 )
-                display_raw = form.getfirst("display_height_cm", "").strip()
-                primary_display = float(display_raw) if display_raw else None
+                primary_display = form_float(form, "display_height_cm")
+                compare_display = form_float(form, "compare_display_height_cm")
+                primary_scale = display_scale_from_form(form, "primary_display_scale")
+                compare_scale = display_scale_from_form(form, "compare_display_scale")
                 primary_name = safe_name(form.getfirst("primary_name", mesh_path.stem), mesh_path.stem)
                 compare_name = safe_name(form.getfirst("compare_name", compare_mesh_path.stem), compare_mesh_path.stem)
                 primary_config = apply_interactive_generation_limits(config_from_lines(mesh_path, primary_lines_path, primary_name, primary_display))
-                compare_config = apply_interactive_generation_limits(config_from_lines(compare_mesh_path, compare_lines_path, compare_name, None))
+                compare_config = apply_interactive_generation_limits(config_from_lines(compare_mesh_path, compare_lines_path, compare_name, compare_display))
 
                 a_vertices, a_faces, _ = compare_avatar_sections.meshcut.load_mesh(mesh_path)
                 b_vertices, b_faces, _ = compare_avatar_sections.meshcut.load_mesh(compare_mesh_path)
                 primary_sections, primary_mesh = compare_avatar_sections.section_tool.build_sections(a_vertices, a_faces, primary_config)
                 compare_sections, compare_mesh = compare_avatar_sections.section_tool.build_sections(b_vertices, b_faces, compare_config)
+                primary_sections = scale_section_measurements(primary_sections, primary_scale)
+                compare_sections = scale_section_measurements(compare_sections, compare_scale)
                 if primary_display is not None:
                     primary_mesh["display_height_cm"] = primary_display
+                elif abs(primary_scale - 1.0) >= 0.0001:
+                    primary_mesh["display_height_cm"] = float(primary_mesh["height_cm"]) * primary_scale
+                if compare_display is not None:
+                    compare_mesh["display_height_cm"] = compare_display
+                elif abs(compare_scale - 1.0) >= 0.0001:
+                    compare_mesh["display_height_cm"] = float(compare_mesh["height_cm"]) * compare_scale
 
                 stem = safe_name(form.getfirst("output_stem", f"{primary_name}_vs_{compare_name}"), "compare_sections")
                 stamp = time.strftime("%Y%m%d_%H%M%S")
@@ -4726,16 +5008,44 @@ class Handler(BaseHTTPRequestHandler):
             stamp = time.strftime("%Y%m%d_%H%M%S")
             out_png = WEB_OUTPUTS / f"{stem}_{stamp}.png"
             out_json = WEB_OUTPUTS / f"{stem}_{stamp}.json"
-            display_raw = form.getfirst("display_height_cm", "").strip()
+            display_height = form_float(form, "display_height_cm")
+            primary_scale = display_scale_from_form(form, "primary_display_scale")
             args = SimpleNamespace(
                 mesh=str(mesh_path),
                 lines=str(lines_path),
                 title=form.getfirst("title", "").strip() or mesh_path.stem,
                 unit_scale=1.0,
-                display_height_cm=float(display_raw) if display_raw else None,
+                display_height_cm=display_height,
             )
             config = apply_interactive_generation_limits(obj_section_tool.make_config(args))
-            report = obj_section_tool.write_outputs(mesh_path, config, out_png, out_json, DEFAULT_LOGO if DEFAULT_LOGO.exists() else None)
+            vertices, faces, loader = obj_section_tool.meshcut.load_mesh(mesh_path)
+            raw_sections, mesh_report = obj_section_tool.overlay.build_sections(vertices, faces, config)
+            sections_for_output = scale_section_measurements(raw_sections, primary_scale)
+            if display_height is not None:
+                mesh_report["display_height_cm"] = display_height
+            elif abs(primary_scale - 1.0) >= 0.0001:
+                mesh_report["display_height_cm"] = float(mesh_report["height_cm"]) * primary_scale
+            obj_section_tool.overlay.render_png(
+                out_png,
+                config["title"],
+                sections_for_output,
+                DEFAULT_LOGO if DEFAULT_LOGO.exists() else None,
+                white_background=True,
+                text_labels=config.get("labels"),
+                show_rig_bone_points=False,
+            )
+            effective_display_height = mesh_report.get("display_height_cm", display_height)
+            report = {
+                "source": str(mesh_path),
+                "loader": loader,
+                "mesh": mesh_report,
+                "display_height_cm": effective_display_height,
+                "height_reference": "OBJ Y axis; floor is mesh min Y after unit scaling",
+                "title": config["title"],
+                "png": str(out_png),
+                "sections": obj_section_tool.overlay.strip_points(sections_for_output, include_rig_bone=False),
+            }
+            out_json.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
             sections = [
                 {
                     "name": section["name"],
@@ -4749,7 +5059,7 @@ class Handler(BaseHTTPRequestHandler):
                 "png_url": f"/outputs/{out_png.name}",
                 "json_url": f"/outputs/{out_json.name}",
                 "height_cm": round(float(report["mesh"]["height_cm"]), 2),
-                "display_height_cm": args.display_height_cm,
+                "display_height_cm": report.get("display_height_cm"),
                 "sections": sections,
             })
         except Exception as exc:
