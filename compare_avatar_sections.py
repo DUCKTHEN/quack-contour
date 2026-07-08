@@ -95,6 +95,8 @@ def fit_transform(
     point_sets,
     panel: tuple[float, float, float, float],
     padding: tuple[float, float, float, float],
+    *,
+    axis_reference: bool = False,
 ):
     x0, y0, x1, y1 = panel
     pad_left, pad_top, pad_right, pad_bottom = padding
@@ -103,6 +105,17 @@ def fit_transform(
     max_x = max(point[0] for point in all_points)
     min_z = min(point[1] for point in all_points)
     max_z = max(point[1] for point in all_points)
+
+    if axis_reference:
+        min_x = min(min_x, 0.0)
+        max_x = max(max_x, 0.0)
+        min_z = min(min_z, 0.0)
+        max_z = max(max_z, 0.0)
+        extent_x = max(abs(min_x), abs(max_x), 1e-6)
+        extent_z = max(abs(min_z), abs(max_z), 1e-6)
+        min_x, max_x = -extent_x, extent_x
+        min_z, max_z = -extent_z, extent_z
+
     span_x = max(max_x - min_x, 1e-6)
     span_z = max(max_z - min_z, 1e-6)
     plot_left = x0 + pad_left
@@ -208,7 +221,12 @@ def render_comparison(
 
         points_a = a_section["points"]
         points_b = b_section["points"]
-        transform, plot_bounds = fit_transform([points_a, points_b], (x0, y0, x1, y1), (42, 68, 42, 50))
+        transform, plot_bounds = fit_transform(
+            [points_a, points_b],
+            (x0, y0, x1, y1),
+            (42, 68, 42, 50),
+            axis_reference=True,
+        )
 
         color = a_section.get("color", "#333333")
         draw_axes(draw, transform, plot_bounds)
@@ -261,7 +279,12 @@ def render_comparison(
         draw.rounded_rectangle([x0, y0, x1, y1], radius=8, fill="#FFFFFF", outline="#DDD8CE", width=2)
         draw.text((x0 + 20, y0 + 18), f"{name} {ALL_SECTIONS_TEXT}\uff08{HEIGHT_TEXT} {display_height(mesh):.2f} cm\uff09", fill="#333333", font=font_panel)
         point_sets = [section["points"] for section in sections]
-        transform, plot_bounds = fit_transform(point_sets, (x0, y0, x1, y1), (42, 62, 42, 38))
+        transform, plot_bounds = fit_transform(
+            point_sets,
+            (x0, y0, x1, y1),
+            (42, 62, 42, 38),
+            axis_reference=True,
+        )
         draw_axes(draw, transform, plot_bounds)
         for section in sections:
             polyline(draw, section["points"], transform, section.get("color", "#333333"), width=3, dashed=(name == b_name))

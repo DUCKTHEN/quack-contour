@@ -389,6 +389,89 @@ button, input, select { font: inherit; }
 }
 
 .output-links a:hover { border-color: #3a4658; }
+
+
+/* Shared UI shell parity: keep the static app close to the local app chrome. */
+.app-header {
+  height: 76px;
+  grid-template-columns: 280px minmax(360px, 780px) minmax(620px, 1fr);
+  gap: 16px;
+  padding: 8px 14px;
+}
+
+.brand-icon { width: 44px; height: 44px; }
+.brand strong { font-size: 26px; }
+.brand small { font-size: 13px; margin-top: 4px; }
+
+.support-card {
+  min-height: 54px;
+  padding: 8px 12px;
+}
+
+.top-actions {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.top-actions .ghost-button,
+.history-button,
+.tool-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.history-button {
+  min-width: 66px;
+  color: var(--accent);
+}
+
+.history-button:disabled,
+.tool-icon-button:disabled,
+.doodle-color-input:disabled,
+.language-toggle:disabled,
+.web-unavailable:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tool-icon-button {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.doodle-color-input {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #131922;
+  padding: 5px;
+}
+
+.language-toggle { min-width: 104px; }
+
+.action-section .action-grid {
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+.action-section .wide-button { margin-top: 0; }
+.action-section #silhouette-png-web { grid-column: 1 / 2; }
+
+.secondary {
+  background: #131922;
+  color: var(--text);
+  border-color: var(--line);
+}
 @media (max-width: 1100px) {
   body { overflow: auto; }
   .app-header { height: auto; grid-template-columns: 1fr; }
@@ -396,4 +479,14 @@ button, input, select { font: inherit; }
   .app-shell { height: auto; grid-template-columns: 1fr; }
   .viewer-wrap { height: 70vh; min-height: 520px; }
   .left-panel { resize: none; }
+}
+
+body.no-local-api .local-api-only {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+body.has-local-api .web-api-note,
+body.no-local-api .local-api-note {
+  display: none;
 }

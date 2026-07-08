@@ -7,9 +7,9 @@
   <title>Quack Contour</title>
   <link rel="icon" href="assets/IconAhiru.png">
   <link rel="apple-touch-icon" href="assets/IconAhiru.png">
-  <link rel="stylesheet" href="web/styles.css">
+  <link rel="stylesheet" href="web/styles.css?v=20260701-shell-parity">
 </head>
-<body>
+<body class="no-local-api">
   <header class="app-header">
     <button class="brand" id="reset-view" type="button" title="表示をリセット">
       <img src="assets/IconAhiru.png" alt="" class="brand-icon">
@@ -23,19 +23,27 @@
       <span id="support-text">OBJを読み込んで、体型シルエットと断面の見え方を確認できます。</span>
     </div>
     <nav class="top-actions" aria-label="primary actions">
-      <button id="generate-top-view-header" type="button" class="ghost-button">断面図</button>
+      <button type="button" class="history-button" disabled>Undo</button>
+      <button type="button" class="history-button" disabled>Redo</button>
+      <button type="button" class="tool-icon-button web-unavailable" disabled title="落書きペン">&#9998;</button>
+      <button type="button" class="tool-icon-button web-unavailable" disabled title="円を描く">&#9675;</button>
+      <button type="button" class="tool-icon-button web-unavailable" disabled title="落書きを消す">&times;</button>
+      <input class="doodle-color-input web-unavailable" type="color" value="#2f80ed" disabled title="落書き色">
       <label class="ghost-button file-inline">画像<input id="underlay-file" type="file" accept="image/*"></label>
       <button id="move-underlay" type="button" class="ghost-button">下絵を動かす</button>
       <button id="clear-underlay" type="button" class="ghost-button">下絵削除</button>
-      <a class="ghost-button" href="https://github.com/DUCKTHEN/quack-contour">GitHub</a>
-      <a class="ghost-button" href="README.md">README</a>
+      <button type="button" class="ghost-button language-toggle" disabled>English</button>
     </nav>
   </header>
 
   <main class="app-shell">
     <aside class="panel left-panel" aria-label="controls">
       <section class="control-section action-section first-section">
-        <button id="generate-top-view" type="button" class="wide-button primary">断面図生成</button>
+        <div class="action-grid">
+          <button id="generate-top-view" type="button" class="wide-button primary">上面図生成</button>
+          <button id="generate-compare-web" type="button" class="wide-button secondary web-unavailable" disabled title="Web版では準備中">比較図生成</button>
+          <button id="silhouette-png-web" type="button" class="wide-button secondary web-unavailable" disabled title="Web版では準備中">シルエットPNG</button>
+        </div>
       </section>
 
       <section class="control-section">
@@ -123,7 +131,7 @@
     </aside>
   </main>
 
-  <script src="vendor/three.min.js"></script>
-  <script src="web/app.js"></script>
+  <script src="vendor/three.min.js?v=20260701-shell-parity"></script>
+  <script src="web/app.js?v=20260701-shell-parity"></script>
 </body>
 </html>

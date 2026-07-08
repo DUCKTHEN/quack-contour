@@ -28,6 +28,7 @@
   var state = {
     primary: null,
     compare: null,
+    localApi: false,
     layout: "side",
     showGuides: true,
     showGrid: true,
@@ -51,6 +52,41 @@
     }
   };
 
+  function setLocalApiState(available) {
+    state.localApi = Boolean(available);
+    document.body.classList.toggle("has-local-api", state.localApi);
+    document.body.classList.toggle("no-local-api", !state.localApi);
+  }
+
+  function detectLocalApi() {
+    var candidates = [];
+    var path = window.location.pathname || "/";
+    if (path.indexOf("/shared/") === 0 || path === "/shared") {
+      candidates.push("../api/health");
+    }
+    candidates.push("api/health");
+
+    var chain = Promise.resolve(false);
+    candidates.forEach(function (url) {
+      chain = chain.then(function (found) {
+        if (found) return true;
+        return fetch(url, { cache: "no-store" })
+          .then(function (response) {
+            if (!response.ok) return false;
+            return response.json();
+          })
+          .then(function (payload) {
+            return Boolean(payload && payload.ok);
+          })
+          .catch(function () {
+            return false;
+          });
+      });
+    });
+
+    chain.then(setLocalApiState);
+  }
+
   var grid = new THREE.GridHelper(7, 28, 0xd5dde7, 0xe5ebf2);
   grid.position.y = 0;
   grid.visible = false;
@@ -72,7 +108,7 @@
   var diagnostics = document.getElementById("diagnostics");
   var supportText = document.getElementById("support-text");
   var viewerEmpty = document.getElementById("viewer-empty");
-  var objWorker = window.Worker ? new Worker("web/obj-worker.js") : null;
+  var objWorker = window.Worker ? new Worker("web/obj-worker.js?v=20260701-shell-parity") : null;
   var parseJobId = 0;
   var underlayFile = document.getElementById("underlay-file");
   var underlayLayer = document.getElementById("underlay-layer");
@@ -979,6 +1015,7 @@
 
   setActiveButton("grid-floating", state.showGrid);
   setActiveButton("camera-floating", state.orthographic);
+  detectLocalApi();
   updateDiagnostics();
   updateGuides();
   updateSceneVisibility();
